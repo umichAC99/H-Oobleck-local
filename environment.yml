@@ -22,7 +22,6 @@ dependencies:
   - pybind11
   - ninja
   - cmake
-  - cxx-compiler
   - tbb-devel
   - pip:
     - transformers>=4.29.0
