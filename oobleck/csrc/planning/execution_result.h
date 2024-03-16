@@ -113,8 +113,8 @@ class StageExecutionResult
 
 class DCExecutionResult {
  public:
-  // # stage, start layer index, end layer index, num nodes, num GPUs per node
-  using key = std::tuple<int, int, int, int, int>;
+  // # stage, start layer index, end layer index, num nodes, num GPUs per node, node type index
+  using key = std::tuple<int, int, int, int, int, std::string>;
 
   struct KeyHash {
     std::size_t operator()(const key& key) const {
@@ -122,7 +122,8 @@ class DCExecutionResult {
                                std::to_string(std::get<1>(key)) + "-" +
                                std::to_string(std::get<2>(key)) + "]" +
                                std::to_string(std::get<3>(key)) + "x" +
-                               std::to_string(std::get<4>(key));
+                               std::to_string(std::get<4>(key)) + "_" +
+                                std::get<5>(key);
       return std::hash<std::string>()(string_key);
     }
   };
@@ -133,19 +134,22 @@ class DCExecutionResult {
              std::get<1>(key1) == std::get<1>(key2) &&
              std::get<2>(key1) == std::get<2>(key2) &&
              std::get<3>(key1) == std::get<3>(key2) &&
-             std::get<4>(key1) == std::get<4>(key2);
+             std::get<4>(key1) == std::get<4>(key2) &&
+             std::get<5>(key1) == std::get<5>(key2);
     }
   };
 
   // Basic constructor
   DCExecutionResult(std::shared_ptr<StageExecutionResult> stage,
                     int num_nodes,
-                    int num_gpus_per_node)
+                    int num_gpus_per_node,
+                    const std::string& node_type_index = "")
       : t1_(stage->forward_ + stage->backward_),
         t2_(2 * (stage->forward_ + stage->backward_)),
         t3_(stage->forward_ + stage->backward_),
         num_nodes_(num_nodes),
         num_gpus_per_node_(num_gpus_per_node),
+        node_type_index_(node_type_index),
         kstar_(0),
         stages_({stage}) {
     assert(stage != nullptr);
@@ -200,6 +204,7 @@ class DCExecutionResult {
   double t1_, t2_, t3_;
   int num_nodes_;
   int num_gpus_per_node_;
+  std::string node_type_index_;
   std::vector<std::shared_ptr<StageExecutionResult>> stages_;
 };
 

@@ -14,6 +14,7 @@
 #include <tuple>
 #include <vector>
 #include "execution_result.h"
+#include "hetero_pipeline_template.h"
 
 namespace oobleck {
 
@@ -93,7 +94,14 @@ class PipelineTemplate {
 std::shared_ptr<LayerExecutionResults> get_profile_results(
     const std::string& model_name,
     const std::string& model_tag,
-    const int microbatch_size);
+    const int microbatch_size,
+    const std::string& node_type = "");
+
+std::vector<std::shared_ptr<LayerExecutionResults>> get_hetero_profile_results(
+    const std::vector<std::string>& model_names,
+    const std::vector<std::string>& model_tags,
+    const int microbatch_size,
+    const std::vector<std::string>& node_types);
 
 class PipelineTemplateGenerator {
  public:
@@ -104,6 +112,11 @@ class PipelineTemplateGenerator {
       std::shared_ptr<LayerExecutionResults> layer_execution_results,
       const std::tuple<int, int>& num_nodes,
       const int num_gpus_per_node);
+  
+  HeteroPipelineTemplate create_hetero_pipeline_template(
+      std::vector<std::shared_ptr<LayerExecutionResults>>
+          layer_execution_results,
+      const HeteroNodeSpec& node_spec);
 
  private:
   cppcoro::task<std::shared_ptr<DCExecutionResult>> divide_and_conquer(
@@ -112,6 +125,12 @@ class PipelineTemplateGenerator {
       const int num_stages,
       const int num_nodes,
       const int num_gpus_per_node);
+
+  cppcoro::task<std::shared_ptr<DCExecutionResult>> divide_and_conquer(
+      const std::vector<std::shared_ptr<LayerExecutionResults>>
+          &layer_execution_results,
+      const std::tuple<int, int> layer_indices,
+      const HeteroNodeSpec& node_spec);
 
   std::atomic<unsigned long> cache_hit_;
   std::atomic<unsigned long> cache_miss_;

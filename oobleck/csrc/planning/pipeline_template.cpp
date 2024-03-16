@@ -29,7 +29,8 @@ namespace oobleck {
 std::shared_ptr<LayerExecutionResults> get_profile_results(
     const std::string& model_name,
     const std::string& model_tag,
-    const int microbatch_size) {
+    const int microbatch_size,
+    const std::string& node_type) {
   auto get_cache = [](const std::string& cache_path) -> nlohmann::json {
     std::ifstream ifs(cache_path);
     assert(ifs.is_open());
@@ -40,8 +41,14 @@ std::shared_ptr<LayerExecutionResults> get_profile_results(
     }
   };
 
-  std::string profile_path =
+  std::string profile_path;
+  if (node_type == "") {
+    profile_path =
       "/tmp/oobleck/profiles/" + model_name + "-" + model_tag;
+  } else {
+    profile_path =
+      "/tmp/oobleck/profiles/" + node_type + "-" + model_name + "-" + model_tag + "-";}
+  
   auto mb = get_cache(profile_path + "/mb" + std::to_string(microbatch_size) +
                       ".json");
   auto allreduce_in_node = get_cache(profile_path + "/allreduce_in_node.json");
@@ -178,7 +185,7 @@ PipelineTemplateGenerator::divide_and_conquer(
   std::shared_ptr<DCExecutionResult> result(nullptr);
   DCExecutionResult::key key =
       std::make_tuple(num_stages, start_layer_index, end_layer_index, num_nodes,
-                      num_gpus_per_node);
+                      num_gpus_per_node, "");
 
   // Return cached result if it exists
   auto it = dc_cache_.find(key);
@@ -249,7 +256,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           std::shared_ptr<DCExecutionResult> result_right(nullptr);
 
           auto key_left = std::make_tuple(num_stages_left, start_layer_index, k,
-                                          num_nodes, num_gpus_left);
+                                          num_nodes, num_gpus_left, "");
 
           auto it = dc_cache_.find(key_left);
           if (it != dc_cache_.end()) {
@@ -262,7 +269,7 @@ PipelineTemplateGenerator::divide_and_conquer(
 
           auto key_right =
               std::make_tuple(num_stages - num_stages_left, k, end_layer_index,
-                              num_nodes, num_gpus_per_node - num_gpus_left);
+                              num_nodes, num_gpus_per_node - num_gpus_left, "");
 
           it = dc_cache_.find(key_right);
           if (it != dc_cache_.end()) {
@@ -295,7 +302,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           std::shared_ptr<DCExecutionResult> result_right(nullptr);
 
           auto key_left = std::make_tuple(num_stages_left, start_layer_index, k,
-                                          num_nodes_left, num_gpus_per_node);
+                                          num_nodes_left, num_gpus_per_node, "");
 
           auto it = dc_cache_.find(key_left);
           if (it != dc_cache_.end()) {
@@ -308,7 +315,7 @@ PipelineTemplateGenerator::divide_and_conquer(
 
           auto key_right =
               std::make_tuple(num_stages - num_stages_left, k, end_layer_index,
-                              num_nodes - num_nodes_left, num_gpus_per_node);
+                              num_nodes - num_nodes_left, num_gpus_per_node, "");
 
           it = dc_cache_.find(key_right);
           if (it != dc_cache_.end()) {

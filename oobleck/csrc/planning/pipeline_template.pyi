@@ -33,7 +33,7 @@ class StageExecutionResult:
     _mem_required: int
 
 def get_profile_results(
-    model_name: str, model_tag: str, microbatch_size: int
+    model_name: str, model_tag: str, microbatch_size: int, node_type = "": str
 ) -> LayerExecutionResults: ...
 
 class PipelineTemplate:

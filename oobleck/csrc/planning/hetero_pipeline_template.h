@@ -18,7 +18,7 @@
 namespace oobleck {
 
 struct SingleNodeSpec {
-  char node_type; // 'A', 'B', 'C' etc.
+  std::string node_type; // 'A100', 'H100', 'B100' etc.
   int num_nodes;
   int num_gpus_per_node;
   double compute_power;
