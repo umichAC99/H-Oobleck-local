@@ -24,7 +24,7 @@ Here are some todos for us to extend Oobleck in supporting heterogenous nodes:
   }
 ```
 
-3. We need to write an API in [`pipeline_template.cpp`](../oobleck/csrc/planning/pipeline_template.cpp) that implements our ideas, the sketch code will be like:
+3. ~~We need to write an API in [`pipeline_template.cpp`](../oobleck/csrc/planning/pipeline_template.cpp) that implements our ideas, the sketch code will be like:~~ [This is legacy since it's not optimal. The main goal is to effectively find the optimal solution]
 ```python
     # nodes is a directory, key is the node type, value is a tuple [num_nodes, num_gpus_per_node]
     AC99(node_types, total_nodes):
@@ -50,5 +50,8 @@ Here are some todos for us to extend Oobleck in supporting heterogenous nodes:
 ```
 
 4. We need to write a test case for our algorithm in [`test_pipeline_template.py`](../tests/planning/test_pipeline_template.py). 
+  To run pytest, do `pytest -s tests/planning/test_pipeline_template.py::test_create_pipeline_templates_maxnode` in the root directory of the project. You don't need to recompile the python test code every time.
 
-5. We also need to discuss the optimality of our algorithm in the documentation.
+5. ~~We also need to discuss the optimality of our algorithm in the documentation.~~
+
+5. We need to extend current oobleck gpu mapping technique such that it can find the optimal solution. Our approach will try to prune the search space but will still try to find the solution closed the optimal one.
