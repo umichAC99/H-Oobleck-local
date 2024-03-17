@@ -30,9 +30,10 @@ extern std::vector<SingleNodeSpec> node_specs;
 struct NodeConfig {
   int node_type_idx;
   int num_nodes;
+  int num_gpus;
   // memory
   NodeConfig(std::string node_type, int num_nodes, int num_gpus_per_node, double compute_power)
-      : num_nodes(num_nodes){
+      : num_nodes(num_nodes), num_gpus(num_gpus_per_node) {
         node_specs.push_back(SingleNodeSpec(node_type, num_gpus_per_node, compute_power));
         node_type_idx = node_specs.size() - 1;
       }
@@ -94,6 +95,8 @@ struct HeteroNodeSpec {
     result += "]";
     return result;
   }
+
+  std::string get_cache_key() const;
 };
 
 class HeteroPipelineTemplate {

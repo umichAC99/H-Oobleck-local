@@ -6,6 +6,7 @@
 #include <memory>
 #include <tuple>
 #include <vector>
+#include <cassert>
 
 namespace oobleck {
 
@@ -114,17 +115,22 @@ class StageExecutionResult
 
 class DCExecutionResult {
  public:
-  // # stage, start layer index, end layer index, num nodes, num GPUs per node, node type index
-  using key = std::tuple<int, int, int, int, int, std::string>;
+  // # stage, start layer index, end layer index, device indices
+  using key = std::tuple<int, int, int, std::string>;
+
+  static std::string get_device_indices_key(const int num_nodes,
+                                     const int num_gpus_per_node,
+                                     const int node_type_indices) {
+    std::string result = std::to_string(num_nodes) + "x" + std::to_string(num_gpus_per_node) + "x" + std::to_string(node_type_indices);
+    return result;
+  }
 
   struct KeyHash {
     std::size_t operator()(const key& key) const {
       std::string string_key = std::to_string(std::get<0>(key)) + "[" +
                                std::to_string(std::get<1>(key)) + "-" +
                                std::to_string(std::get<2>(key)) + "]" +
-                               std::to_string(std::get<3>(key)) + "x" +
-                               std::to_string(std::get<4>(key)) + "_" +
-                                std::get<5>(key);
+                                std::get<3>(key);
       return std::hash<std::string>()(string_key);
     }
   };
@@ -134,9 +140,7 @@ class DCExecutionResult {
       return std::get<0>(key1) == std::get<0>(key2) &&
              std::get<1>(key1) == std::get<1>(key2) &&
              std::get<2>(key1) == std::get<2>(key2) &&
-             std::get<3>(key1) == std::get<3>(key2) &&
-             std::get<4>(key1) == std::get<4>(key2) &&
-             std::get<5>(key1) == std::get<5>(key2);
+             std::get<3>(key1) == std::get<3>(key2);
     }
   };
 

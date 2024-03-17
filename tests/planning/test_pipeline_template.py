@@ -15,7 +15,7 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     def test_hetero_node_spec(self, profile: LayerExecutionResults):
         node_spec = self.factory.get_dummy_hetero_node_spec()
         print(node_spec)
-        
+    
     def test_create_hetero_pipeline_templates(self):
         generator = PipelineTemplateGenerator()
         hetero_profiles = self.factory.get_dummy_hetero_profile()
