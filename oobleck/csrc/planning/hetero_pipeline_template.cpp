@@ -32,6 +32,7 @@ void generateSubsetsUtil(const HeteroNodeSpec& originalSpec, std::vector<HeteroN
         for (int j = 1; j <= originalSpec.node_specs[i].num_nodes; ++j) {
             HeteroNodeSpec newSubset = currentSubset;
             newSubset.node_specs[i].num_nodes = j;
+            newSubset.update_fields();
             allSubsets.push_back(newSubset);
             generateSubsetsUtil(originalSpec, allSubsets, newSubset, i + 1);
         }
@@ -49,11 +50,7 @@ std::vector<HeteroNodeSpec> generateSubsets(const HeteroNodeSpec& heteroSpec) {
     #ifdef DEBUG
     // Print all subsets for demonstration purposes
     for (const auto& subset : allSubsets) {
-        std::cout << "[ ";
-        for (const auto& config : subset.node_specs) {
-            std::cout << "[" << config.node_type_idx << ", " << config.num_nodes << "] ";
-        }
-        std::cout << "], ";
+        std::cout << subset.to_string() << std::endl;
     }
     std::cout << std::endl;
 

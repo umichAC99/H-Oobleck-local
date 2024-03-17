@@ -36,6 +36,11 @@ struct NodeConfig {
         node_specs.push_back(SingleNodeSpec(node_type, num_gpus_per_node, compute_power));
         node_type_idx = node_specs.size() - 1;
       }
+
+  std::string to_string() const{
+    return node_specs[node_type_idx].node_type + 
+          "[" + std::to_string(num_nodes) + "nodes]";
+  }
 };
 
 struct HeteroNodeSpec {
@@ -43,12 +48,48 @@ struct HeteroNodeSpec {
   int num_total_nodes;
   int idx_to_only_node; // index to the node that has only one node; other nodes are 0.
   HeteroNodeSpec(std::vector<NodeConfig> node_specs) : node_specs(node_specs), num_total_nodes(0) {
-    for (auto& node_spec : node_specs) {
-      num_total_nodes += node_spec.num_nodes;
-    }
-    idx_to_only_node = -1;
+    update_fields();
   }
   HeteroNodeSpec(): num_total_nodes(0), idx_to_only_node(-1) {}
+
+  // update num_total_nodes and idx_to_only_node when node_specs is updated
+  void update_fields(){
+    num_total_nodes = 0;
+    for (int i = 0; i < node_specs.size(); i++) {
+      auto& node_spec = node_specs[i];
+      num_total_nodes += node_spec.num_nodes;
+
+      // point idx_to_only_node to the only node
+      if (node_spec.num_nodes == 1)
+        idx_to_only_node = i;
+    }
+    
+    // if there is more than one node, idx_to_only_node is not valid
+    if (num_total_nodes != 1) {
+      idx_to_only_node = -1;
+    }
+  }
+
+  // subtract another HeteroNodeSpec(a subset) from this
+  HeteroNodeSpec subtract(const HeteroNodeSpec& other) const {
+    std::vector<NodeConfig> new_node_specs = node_specs;
+    for (int i = 0; i < node_specs.size(); i++) {
+      new_node_specs[i].num_nodes -= other.node_specs[i].num_nodes;
+      assert(new_node_specs[i].num_nodes >= 0);
+    }
+    return HeteroNodeSpec(new_node_specs);
+  }
+
+  std::string to_string() const{
+    std::string result = "[";
+    result += "#: " + std::to_string(num_total_nodes) + ", ";
+    result += "idx: " + std::to_string(idx_to_only_node) + ", ";
+    for (auto& config : node_specs) {
+      result += "[" + config.to_string() + "] ";
+    }
+    result += "]";
+    return result;
+  }
 };
 
 class HeteroPipelineTemplate {
