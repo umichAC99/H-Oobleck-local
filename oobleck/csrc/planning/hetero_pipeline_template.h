@@ -26,6 +26,7 @@ struct SingleNodeSpec {
 };
 
 extern std::vector<SingleNodeSpec> node_specs;
+extern std::map<std::string, int> node_specs_map;
 
 struct NodeConfig {
   int node_type_idx;
@@ -34,8 +35,13 @@ struct NodeConfig {
   // memory
   NodeConfig(std::string node_type, int num_nodes, int num_gpus_per_node, double compute_power)
       : num_nodes(num_nodes), num_gpus(num_gpus_per_node) {
-        node_specs.push_back(SingleNodeSpec(node_type, num_gpus_per_node, compute_power));
-        node_type_idx = node_specs.size() - 1;
+        if (node_specs_map.find(node_type) == node_specs_map.end()) {
+          node_specs.push_back(SingleNodeSpec(node_type, num_gpus_per_node, compute_power));
+          node_specs_map[node_type] = node_specs.size() - 1;
+          node_type_idx = node_specs.size() - 1;
+        } else {
+          node_type_idx = node_specs_map[node_type];
+        }
       }
 
   std::string to_string() const{

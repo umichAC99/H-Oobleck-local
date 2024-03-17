@@ -10,6 +10,7 @@
 #include <optional>
 #include <ranges>
 #include <string>
+#include <map>
 
 #ifdef PYBIND11_MODULE
 #include <pybind11/pybind11.h>
@@ -26,6 +27,7 @@
 namespace oobleck {
 
 std::vector<SingleNodeSpec> node_specs;
+std::map<std::string, int> node_specs_map;
 
 std::string HeteroNodeSpec::get_cache_key() const {
   std::string result = "";
@@ -46,7 +48,10 @@ void generateSubsetsUtil(const HeteroNodeSpec &originalSpec,
       HeteroNodeSpec newSubset = currentSubset;
       newSubset.node_specs[i].num_nodes = j;
       newSubset.update_fields();
-      allSubsets.push_back(newSubset);
+      // skip the original set
+      if (newSubset.num_total_nodes != originalSpec.num_total_nodes) {
+        allSubsets.push_back(newSubset);
+      }
       generateSubsetsUtil(originalSpec, allSubsets, newSubset, i + 1);
     }
   }
@@ -145,6 +150,7 @@ PipelineTemplateGenerator::divide_and_conquer(
         &layer_execution_results,
     const std::tuple<int, int> layer_indices, const int num_stages,
     const HeteroNodeSpec &node_spec) {
+  co_await thread_pool_.schedule();
 
   int start_layer_index = std::get<0>(layer_indices);
   int end_layer_index = std::get<1>(layer_indices);
@@ -154,8 +160,8 @@ PipelineTemplateGenerator::divide_and_conquer(
   DCExecutionResult::key key =
       std::make_tuple(num_stages, start_layer_index, end_layer_index,
                       node_spec.get_cache_key());
-  // std::cout << "key: " << std::get<0>(key) << " " << std::get<1>(key) << " "
-  //           << std::get<2>(key) << " " << std::get<3>(key) << std::endl;
+  std::cout << "ENTER FUNCTION: layer indices: " << start_layer_index << " " << end_layer_index
+            << "num_stages: " << num_stages << "node_spec: " << node_spec.to_string() << std::endl;
 
   // Return cached result if it exists
   auto it = dc_cache_.find(key);
@@ -184,15 +190,20 @@ PipelineTemplateGenerator::divide_and_conquer(
     num_gpus = node_spec.node_specs[node_spec.idx_to_only_node].num_gpus;
     if (num_gpus < num_stages) {
       // At least one GPU should be assigned to each stage
+      std::cout << "infeasible: num_gpus < num_stages" << std::endl;
       infeasible = true;
     }
 
     double log_num_gpus = log2(num_gpus);
     if (num_stages == 1 && log_num_gpus != trunc(log_num_gpus)) {
+      std::cout << "infeasible: num_stages == 1 && log_num_gpus != "
+                   "trunc(log_num_gpus)"
+                << std::endl;
       infeasible = true;
     }
   } else if (num_total_nodes > num_stages) {
     // Two or more node cannot be assigned to the same stage
+    std::cout << "infeasible: num_total_nodes > num_stages" << std::endl;
     infeasible = true;
   }
 
@@ -204,6 +215,7 @@ PipelineTemplateGenerator::divide_and_conquer(
 
   // Base case (conquer phase)
   if (num_stages == 1) {
+    std::cout << "entering base case" << std::endl;
     assert(num_total_nodes == 1);
     num_gpus = node_spec.node_specs[node_spec.idx_to_only_node].num_gpus;
     int node_type_idx =
@@ -212,8 +224,7 @@ PipelineTemplateGenerator::divide_and_conquer(
     auto stage = std::make_shared<StageExecutionResult>(
         layer_execution_results[node_type_idx], layer_indices, num_gpus,
         node_type_idx);
-    auto result =
-        std::make_shared<DCExecutionResult>(stage);
+    auto result = std::make_shared<DCExecutionResult>(stage);
     dc_cache_.insert({key, result});
     co_return result;
   }
@@ -271,19 +282,68 @@ PipelineTemplateGenerator::divide_and_conquer(
             continue;
           }
 
-          auto new_result = std::make_shared<DCExecutionResult>(
-              result_left, result_right);
+          auto new_result =
+              std::make_shared<DCExecutionResult>(result_left, result_right);
           if (result == nullptr || new_result->get_t() < result->get_t()) {
             result = new_result;
           }
         }
       } // for num_gpus_left
-    }   // if num_nodes == 1  
+    }   // if num_nodes == 1
     else {
       // Split nodes
-      std::vector<HeteroNodeSpec> all_node_spec_subsets = generateSubsets(node_spec);
-    } // if num_nodes != 1
-  }     // divide for loop
+      std::vector<HeteroNodeSpec> all_node_spec_subsets =
+          generateSubsets(node_spec);
+      for (auto &node_spec_subset_left : all_node_spec_subsets) {
+        auto node_spec_subset_right = node_spec.subtract(node_spec_subset_left);
+        std::cout << "origin " << node_spec.to_string() << std::endl;
+        std::cout << "left " << node_spec_subset_left.to_string() << std::endl;
+        std::cout << "right " << node_spec_subset_right.to_string()
+                  << std::endl;
+        for (int num_stages_left :
+             std::ranges::iota_view<int, int>(1, num_stages)) {
+
+          std::shared_ptr<DCExecutionResult> result_left(nullptr);
+          std::shared_ptr<DCExecutionResult> result_right(nullptr);
+          auto key_left =
+              std::make_tuple(num_stages_left, start_layer_index, k,
+                              node_spec_subset_left.get_cache_key());
+          auto it = dc_cache_.find(key_left);
+          if (it != dc_cache_.end()) {
+            result_left = it->second;
+          } else {
+            result_left = co_await divide_and_conquer(
+                layer_execution_results, std::make_tuple(start_layer_index, k),
+                num_stages_left, node_spec_subset_left);
+          }
+
+          auto key_right =
+              std::make_tuple(num_stages - num_stages_left, k, end_layer_index,
+                              node_spec_subset_right.get_cache_key());
+          it = dc_cache_.find(key_right);
+          if (it != dc_cache_.end()) {
+            result_right = it->second;
+          } else {
+            result_right = co_await divide_and_conquer(
+                layer_execution_results, std::make_tuple(k, end_layer_index),
+                num_stages - num_stages_left, node_spec_subset_right);
+          }
+
+          if (result_left == nullptr || result_right == nullptr) {
+            continue;
+          }
+
+          auto new_result =
+              std::make_shared<DCExecutionResult>(result_left, result_right);
+          if (result == nullptr || new_result->get_t() < result->get_t()) {
+            result = new_result;
+          }
+        } // for stages
+      }   // for node_spec_subset
+    }     // if num_nodes != 1
+  }       // divide for loop
+
+  dc_cache_.insert({key, result});
   co_return result;
 }
 

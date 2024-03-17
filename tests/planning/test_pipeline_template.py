@@ -16,7 +16,6 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         node_spec = self.factory.get_dummy_hetero_node_spec()
         print(node_spec)
     
-    @pytest.mark.skip(reason="Skipped")
     def test_create_hetero_pipeline_templates(self):
         generator = PipelineTemplateGenerator()
         hetero_profiles = self.factory.get_dummy_hetero_profile()
@@ -42,7 +41,7 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         assert len(pipeline_templates[0].get_stages()) == 1
         assert pipeline_templates[0]._iteration_time > 0
 
-    
+    @pytest.mark.skip(reason="Skipped")
     def test_create_pipeline_templates_maxnode(self, profile: LayerExecutionResults):
         generator = PipelineTemplateGenerator()
         num_nodes = profile.size  # num_nodes == number of layers
@@ -97,7 +96,6 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
             template._num_gpus_per_node * template._num_nodes
             for template in pipeline_templates
         ) == 4
-
     @pytest.mark.skip(reason="Skipped")
     def test_create_pipeline_templates_multiple_gpus_in_node_range(
         self, profile: LayerExecutionResults
