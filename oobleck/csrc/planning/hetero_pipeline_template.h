@@ -30,42 +30,42 @@ struct HeteroNodeSpec {
 
 class HeteroPipelineTemplate {
 public:
-  typedef std::vector<std::vector<std::shared_ptr<StageExecutionResult>>>
-      HeteroStageExecutionResults;
   HeteroPipelineTemplate(
-      const HeteroStageExecutionResults &stage_execution_results,
+      const std::vector<std::shared_ptr<StageExecutionResult>>&
+                       stage_execution_results,
       int num_layers, const HeteroNodeSpec &node_spec)
       : stage_execution_results_(stage_execution_results),
         node_spec_(node_spec) {
     // Run divide and conquer to create a vector of StageExecutionResult
     // Perform assertion
-    // 1. num_nodes * num_gpus_per_node == all # GPUs used by stage results
+    // 1. num_nodes * num_gpus_per_node == all for each node type
     // 2. stages cover all layers
-    int num_gpus_used = 0;
-    for (int i = 0; i < stage_execution_results_.size(); i++) {
-      auto &stages = stage_execution_results_[i];
-      for (auto &stage : stages) {
-        std::cout << stage->to_string() << std::endl;
-        num_gpus_used += stage->num_gpus_;
-      }
-      assert(num_gpus_used == node_spec_.node_specs[i].num_nodes *
-                                  node_spec_.node_specs[i].num_gpus_per_node);
-
-      int stage_num_layers = 0;
-      for (auto &stage : stages) {
-        stage_num_layers += stage->num_layers();
-      }
+    std::vector<int> num_gpus_used(node_spec.node_specs.size(), 0);
+    for (auto& stage : stage_execution_results_) {
+      std::cout << stage->to_string() << std::endl;
+      num_gpus_used[stage->node_type_idx_] += stage->num_gpus_;
     }
+
+    for (int i = 0; i < num_gpus_used.size(); i++) {
+      assert(num_gpus_used[i] == node_spec.node_specs[i].num_nodes * node_spec.node_specs[i].num_gpus_per_node);
+    }
+
+    int stage_num_layers = 0;
+    for (auto& stage : stage_execution_results_) {
+      stage_num_layers += stage->num_layers();
+    }
+    assert(stage_num_layers == num_layers);
+    
   }
 
-  const HeteroStageExecutionResults &get_stages() const {
+  const std::vector<std::shared_ptr<StageExecutionResult>> &get_stages() const {
     return stage_execution_results_;
   }
 
   const HeteroNodeSpec &get_node_spec() const { return node_spec_; }
 
 private:
-  HeteroStageExecutionResults stage_execution_results_;
+  std::vector<std::shared_ptr<StageExecutionResult>> stage_execution_results_;
   HeteroNodeSpec node_spec_;
 };
 

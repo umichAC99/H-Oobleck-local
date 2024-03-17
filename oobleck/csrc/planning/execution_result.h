@@ -63,8 +63,8 @@ class StageExecutionResult
   StageExecutionResult(
       const std::shared_ptr<LayerExecutionResults> layer_results,
       const std::tuple<int, int>& layer_indices,
-      const int num_gpus)
-      : num_gpus_(num_gpus) {
+      const int num_gpus, const int node_type_idx = 0)
+      : num_gpus_(num_gpus), node_type_idx_(node_type_idx) {
     int layer_start_index = std::get<0>(layer_indices);
     int layer_end_index = std::get<1>(layer_indices);
     assert(layer_end_index <= layer_results->size());
@@ -100,7 +100,7 @@ class StageExecutionResult
     int last_layer_index = layer_indices_.back();
     return "StageExecutionResult[" + std::to_string(first_layer_index) + ":" +
            std::to_string(last_layer_index) + "] with " +
-           std::to_string(num_gpus_) + " devices";
+           std::to_string(num_gpus_) + " devices on node type " + std::to_string(node_type_idx_);
   }
 
   int num_gpus_;
@@ -109,6 +109,7 @@ class StageExecutionResult
   double backward_;
   std::map<int, double> allreduce_across_nodes_;
   int mem_required_;
+  const int node_type_idx_;
 };
 
 class DCExecutionResult {
@@ -142,14 +143,13 @@ class DCExecutionResult {
   // Basic constructor
   DCExecutionResult(std::shared_ptr<StageExecutionResult> stage,
                     int num_nodes,
-                    int num_gpus_per_node,
-                    const std::string& node_type_index = "")
+                    int num_gpus_per_node)
       : t1_(stage->forward_ + stage->backward_),
         t2_(2 * (stage->forward_ + stage->backward_)),
         t3_(stage->forward_ + stage->backward_),
         num_nodes_(num_nodes),
         num_gpus_per_node_(num_gpus_per_node),
-        node_type_index_(node_type_index),
+        node_type_indices_(std::string{char(stage->node_type_idx_ + '0')}),
         kstar_(0),
         stages_({stage}) {
     assert(stage != nullptr);
@@ -189,6 +189,7 @@ class DCExecutionResult {
     t3_ = latency;
 
     stages_.insert(stages_.end(), right->stages_.begin(), right->stages_.end());
+    node_type_indices_ = left->node_type_indices_ + right->node_type_indices_;
   }
 
   double get_t() const { return t1_ + t2_ + t3_; }
@@ -204,7 +205,7 @@ class DCExecutionResult {
   double t1_, t2_, t3_;
   int num_nodes_;
   int num_gpus_per_node_;
-  std::string node_type_index_;
+  std::string node_type_indices_;
   std::vector<std::shared_ptr<StageExecutionResult>> stages_;
 };
 
