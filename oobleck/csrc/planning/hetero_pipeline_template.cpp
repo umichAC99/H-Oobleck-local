@@ -34,17 +34,17 @@ get_hetero_profile_results(const std::vector<std::string> &model_names,
   }
 }
 
-//   HeteroPipelineTemplate
-//   PipelineTemplateGenerator::create_hetero_pipeline_template(
-//       std::vector<std::shared_ptr<LayerExecutionResults>>
-//           layer_execution_results,
-//       const HeteroNodeSpec& node_spec){
-//         #ifdef PYBIND11_MODULE
-//   // Release GIL
-//   pybind11::gil_scoped_release release;
-// #endif
+  HeteroPipelineTemplate
+  PipelineTemplateGenerator::create_hetero_pipeline_template(
+      std::vector<std::shared_ptr<LayerExecutionResults>>
+          layer_execution_results,
+      const HeteroNodeSpec& node_spec){
+        #ifdef PYBIND11_MODULE
+  // Release GIL
+  pybind11::gil_scoped_release release;
+#endif
 
-//     // Create a vector of StageExecutionResult
-//       }
+    return HeteroPipelineTemplate();
+      }
 
 } // namespace oobleck

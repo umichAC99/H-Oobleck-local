@@ -97,6 +97,7 @@ std::shared_ptr<LayerExecutionResults> get_profile_results(
     const int microbatch_size,
     const std::string& node_type = "");
 
+// get profile results for each node type
 std::vector<std::shared_ptr<LayerExecutionResults>> get_hetero_profile_results(
     const std::vector<std::string>& model_names,
     const std::vector<std::string>& model_tags,
@@ -113,6 +114,7 @@ class PipelineTemplateGenerator {
       const std::tuple<int, int>& num_nodes,
       const int num_gpus_per_node);
   
+  // create one hetero pipeline template based on node spec and layer execution results
   HeteroPipelineTemplate create_hetero_pipeline_template(
       std::vector<std::shared_ptr<LayerExecutionResults>>
           layer_execution_results,

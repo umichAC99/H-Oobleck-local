@@ -30,10 +30,12 @@ struct SingleNodeSpec {
 struct HeteroNodeSpec {
   std::vector<SingleNodeSpec> node_specs;
   HeteroNodeSpec(std::vector<SingleNodeSpec> node_specs) : node_specs(node_specs) {}
+  HeteroNodeSpec() {}
 };
 
 class HeteroPipelineTemplate {
 public:
+  HeteroPipelineTemplate() = default;
   HeteroPipelineTemplate(
       const std::vector<std::shared_ptr<StageExecutionResult>>&
                        stage_execution_results,
