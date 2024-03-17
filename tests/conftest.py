@@ -147,7 +147,7 @@ class OobleckStaticClassFactory:
         self.get_model()
 
         results: list[LayerExecutionResults] = []
-        for i in range(2):
+        for i in range(3):
             num_layers = len(self._model.layers)
 
             layer_results: list[LayerExecutionResult] = []

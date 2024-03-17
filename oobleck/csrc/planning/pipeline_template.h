@@ -132,6 +132,7 @@ class PipelineTemplateGenerator {
       const std::vector<std::shared_ptr<LayerExecutionResults>>
           &layer_execution_results,
       const std::tuple<int, int> layer_indices,
+      const int num_stages,
       const HeteroNodeSpec& node_spec);
 
   std::atomic<unsigned long> cache_hit_;

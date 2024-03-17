@@ -41,6 +41,10 @@ struct NodeConfig {
     return node_specs[node_type_idx].node_type + 
           "[" + std::to_string(num_nodes) + "nodes]";
   }
+
+  bool operator==(const NodeConfig& other) const {
+    return node_type_idx == other.node_type_idx && num_nodes == other.num_nodes;
+  }
 };
 
 struct HeteroNodeSpec {
@@ -112,7 +116,7 @@ public:
     }
 
     for (int i = 0; i < num_gpus_used.size(); i++) {
-      assert(num_gpus_used[i] == node_spec.node_specs[i].num_nodes * node_spec.node_specs[i].num_gpus_per_node);
+      assert(num_gpus_used[i] == node_spec.node_specs[i].num_nodes * node_specs[node_spec.node_specs[i].node_type_idx].num_gpus);
     }
 
     int stage_num_layers = 0;
