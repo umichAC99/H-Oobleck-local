@@ -15,16 +15,14 @@ class LayerExecutionResult:
     _allreduce_across_nodes: dict[int, float]
     _mem_required: tuple[int, int]
     
-class SingleNodeSpec:
+class NodeConfig:
     def __init__(self, node_type: str, num_nodes: int, num_gpus_per_node: int, compute_power: float): ...
-    _node_type: str
+    _node_type_idx: int
     _num_nodes: int
-    _num_gpus_per_node: int
-    _compute_power: float
     
 class HeteroNodeSpec:
-    def get(self) -> list[SingleNodeSpec]: ...
-    def at(self, index: int) -> SingleNodeSpec: ...
+    def get(self) -> list[NodeConfig]: ...
+    def at(self, index: int) -> NodeConfig: ...
     def size(self) -> int: ...
 
 class LayerExecutionResults:

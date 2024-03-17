@@ -18,19 +18,37 @@
 namespace oobleck {
 
 struct SingleNodeSpec {
-  std::string node_type; // 'A100', 'H100', 'B100' etc.
-  int num_nodes;
-  int num_gpus_per_node;
+  std::string node_type;  // 'A100', 'H100', 'B100' etc.
+  int num_gpus;
   double compute_power;
+  SingleNodeSpec(std::string node_type, int num_gpus, double compute_power)
+      : node_type(node_type), num_gpus(num_gpus), compute_power(compute_power) {}
+};
+
+extern std::vector<SingleNodeSpec> node_specs;
+
+struct NodeConfig {
+  int node_type_idx;
+  int num_nodes;
   // memory
-  SingleNodeSpec(std::string node_type, int num_nodes, int num_gpus_per_node, double compute_power)
-      : node_type(node_type), num_nodes(num_nodes), num_gpus_per_node(num_gpus_per_node), compute_power(compute_power) {}
+  NodeConfig(std::string node_type, int num_nodes, int num_gpus_per_node, double compute_power)
+      : num_nodes(num_nodes){
+        node_specs.push_back(SingleNodeSpec(node_type, num_gpus_per_node, compute_power));
+        node_type_idx = node_specs.size() - 1;
+      }
 };
 
 struct HeteroNodeSpec {
-  std::vector<SingleNodeSpec> node_specs;
-  HeteroNodeSpec(std::vector<SingleNodeSpec> node_specs) : node_specs(node_specs) {}
-  HeteroNodeSpec() {}
+  std::vector<NodeConfig> node_specs;
+  int num_total_nodes;
+  int idx_to_only_node; // index to the node that has only one node; other nodes are 0.
+  HeteroNodeSpec(std::vector<NodeConfig> node_specs) : node_specs(node_specs), num_total_nodes(0) {
+    for (auto& node_spec : node_specs) {
+      num_total_nodes += node_spec.num_nodes;
+    }
+    idx_to_only_node = -1;
+  }
+  HeteroNodeSpec(): num_total_nodes(0), idx_to_only_node(-1) {}
 };
 
 class HeteroPipelineTemplate {

@@ -74,28 +74,25 @@ PYBIND11_MODULE(pipeline_template, m) {
                std::to_string(pt.get_num_nodes()) + "nodes>";
       });
 
-  py::class_<SingleNodeSpec>(m, "SingleNodeSpec")
+  py::class_<NodeConfig>(m, "NodeConfig")
         .def(py::init<const std::string, const int, const int, const double>(),
              py::arg("node_type"), py::arg("num_nodes"), py::arg("num_gpus_per_node"),
              py::arg("compute_power"))
-        .def_readonly("_node_type", &SingleNodeSpec::node_type)
-        .def_readonly("_num_nodes", &SingleNodeSpec::num_nodes)
-        .def_readonly("_num_gpus_per_node", &SingleNodeSpec::num_gpus_per_node)
-        .def_readonly("_compute_power", &SingleNodeSpec::compute_power)
-        .def("__repr__", [](const SingleNodeSpec& sns) {
-          return "<oobleck.SingleNodeSpec." + sns.node_type + 
-          "[ " + std::to_string(sns.num_nodes) + "nodes, " +
-            std::to_string(sns.num_gpus_per_node) + "gpus/node]>";
+        .def_readonly("_node_type_idx", &NodeConfig::node_type_idx)
+        .def_readonly("_num_nodes", &NodeConfig::num_nodes)
+        .def("__repr__", [](const NodeConfig& sns) {
+          return "<oobleck.NodeConfig." + node_specs[sns.node_type_idx].node_type + 
+          "[ " + std::to_string(sns.num_nodes) + "nodes]>";
         });
 
   py::class_<HeteroNodeSpec>(m, "HeteroNodeSpec")
-      .def(py::init<const std::vector<SingleNodeSpec>&>())
+      .def(py::init<const std::vector<NodeConfig>&>())
       .def_readonly("_node_specs", &HeteroNodeSpec::node_specs)
       .def("__repr__", [](const HeteroNodeSpec& hns) {
         std::string repr = "<oobleck.HeteroNodeSpec.[";
         for (const auto& sns : hns.node_specs) {
-          repr += sns.node_type + "[ " + std::to_string(sns.num_nodes) + "nodes, " +
-            std::to_string(sns.num_gpus_per_node) + "gpus/node], ";
+          repr += node_specs[sns.node_type_idx].node_type + 
+          "[" + std::to_string(sns.num_nodes) + "nodes],";
         }
         repr.pop_back();
         repr.pop_back();

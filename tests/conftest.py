@@ -25,7 +25,7 @@ from oobleck.csrc.planning.pipeline_template import (
     PipelineTemplate,
     StageExecutionResult,
     HeteroNodeSpec,
-    SingleNodeSpec,
+    NodeConfig,
 )
 from oobleck.execution.dataloader import LoaderType, OobleckDataLoader
 from oobleck.execution.dataset import OobleckDataset
@@ -173,8 +173,9 @@ class OobleckStaticClassFactory:
 
         return HeteroNodeSpec(
             [
-                SingleNodeSpec("A100", 3, 8, 1.0),
-                SingleNodeSpec("V100", 4, 8, 0.8),
+                NodeConfig("A100", 3, 8, 1.0),
+                NodeConfig("V100", 4, 8, 0.8),
+                NodeConfig("B100", 4, 8, 1.2)
             ]
         )
 
