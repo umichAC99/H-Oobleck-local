@@ -303,9 +303,12 @@ PipelineTemplateGenerator::divide_and_conquer(
               std::make_tuple(num_stages_left, start_layer_index, k,
                               DCExecutionResult::get_device_indices_key(
                                   num_nodes_left, num_gpus_per_node, 0));
-
+          
           auto it = dc_cache_.find(key_left);
           if (it != dc_cache_.end()) {
+            // std::cout << "found left" << std::endl;
+            // std::cout << "key left: " << std::get<0>(key_left) << " " << std::get<1>(key_left) << " "
+            // << std::get<2>(key_left) << " " << std::get<3>(key_left) << std::endl;
             result_left = it->second;
           } else {
             result_left = co_await divide_and_conquer(
@@ -321,6 +324,10 @@ PipelineTemplateGenerator::divide_and_conquer(
           it = dc_cache_.find(key_right);
           if (it != dc_cache_.end()) {
             result_right = it->second;
+            // std::cout << "found right" << std::endl;
+            // std::cout << "key right: " << std::get<0>(key_right) << " " << std::get<1>(key_right) << " "
+            // << std::get<2>(key_right) << " " << std::get<3>(key_right) << std::endl;
+
           } else {
             result_right = co_await divide_and_conquer(
                 layer_execution_results, std::make_tuple(k, end_layer_index),

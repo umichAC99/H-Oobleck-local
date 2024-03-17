@@ -278,7 +278,11 @@ PipelineTemplateGenerator::divide_and_conquer(
           }
         }
       } // for num_gpus_left
-    }   // if num_nodes == 1
+    }   // if num_nodes == 1  
+    else {
+      // Split nodes
+      std::vector<HeteroNodeSpec> all_node_spec_subsets = generateSubsets(node_spec);
+    } // if num_nodes != 1
   }     // divide for loop
   co_return result;
 }
