@@ -228,8 +228,7 @@ PipelineTemplateGenerator::divide_and_conquer(
     // If there is only one stage, assign all layers to that stage
     auto stage = std::make_shared<StageExecutionResult>(
         layer_execution_results, layer_indices, num_gpus_per_node);
-    auto result = std::make_shared<DCExecutionResult>(stage, num_nodes,
-                                                      num_gpus_per_node);
+    auto result = std::make_shared<DCExecutionResult>(stage);
     dc_cache_.insert({key, result});
     // accessor->second = result;
     co_return result;
@@ -285,7 +284,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           }
 
           auto new_result = std::make_shared<DCExecutionResult>(
-              result_left, result_right, num_nodes, num_gpus_per_node);
+              result_left, result_right);
           if (result == nullptr || new_result->get_t() < result->get_t()) {
             result = new_result;
           }
@@ -334,7 +333,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           }
 
           auto new_result = std::make_shared<DCExecutionResult>(
-              result_left, result_right, num_nodes, num_gpus_per_node);
+              result_left, result_right);
           if (result == nullptr || new_result->get_t() < result->get_t()) {
             result = new_result;
           }

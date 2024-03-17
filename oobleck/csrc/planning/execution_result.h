@@ -145,14 +145,10 @@ class DCExecutionResult {
   };
 
   // Basic constructor
-  DCExecutionResult(std::shared_ptr<StageExecutionResult> stage,
-                    int num_nodes,
-                    int num_gpus_per_node)
+  DCExecutionResult(std::shared_ptr<StageExecutionResult> stage)
       : t1_(stage->forward_ + stage->backward_),
         t2_(2 * (stage->forward_ + stage->backward_)),
         t3_(stage->forward_ + stage->backward_),
-        num_nodes_(num_nodes),
-        num_gpus_per_node_(num_gpus_per_node),
         node_type_indices_(std::string{char(stage->node_type_idx_ + '0')}),
         kstar_(0),
         stages_({stage}) {
@@ -161,12 +157,8 @@ class DCExecutionResult {
 
   // Combine constructor
   DCExecutionResult(const std::shared_ptr<DCExecutionResult> left,
-                    const std::shared_ptr<DCExecutionResult> right,
-                    int num_nodes,
-                    int num_gpus_per_node)
-      : num_nodes_(num_nodes),
-        num_gpus_per_node_(num_gpus_per_node),
-        stages_(left->stages_) {
+                    const std::shared_ptr<DCExecutionResult> right)
+      : stages_(left->stages_) {
     assert(left->stages_.size() > 0 && right->stages_.size() > 0);
 
     kstar_ = left->get_kstar_latency() > right->get_kstar_latency()
@@ -207,8 +199,6 @@ class DCExecutionResult {
  private:
   int kstar_;
   double t1_, t2_, t3_;
-  int num_nodes_;
-  int num_gpus_per_node_;
   std::string node_type_indices_;
   std::vector<std::shared_ptr<StageExecutionResult>> stages_;
 };
