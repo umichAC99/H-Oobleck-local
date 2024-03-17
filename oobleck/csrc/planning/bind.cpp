@@ -61,6 +61,25 @@ PYBIND11_MODULE(pipeline_template, m) {
                std::to_string(pt.get_num_nodes()) + "nodes>";
       });
 
+  py::class_<SingleNodeSpec>(m, "SingleNodeSpec")
+        .def(py::init<const std::string, const int, const int, const double>(),
+             py::arg("node_type"), py::arg("num_nodes"), py::arg("num_gpus_per_node"),
+             py::arg("compute_power"))
+        .def_readonly("_node_type", &SingleNodeSpec::node_type)
+        .def_readonly("_num_nodes", &SingleNodeSpec::num_nodes)
+        .def_readonly("_num_gpus_per_node", &SingleNodeSpec::num_gpus_per_node)
+        .def_readonly("_compute_power", &SingleNodeSpec::compute_power);
+
+  py::class_<HeteroNodeSpec>(m, "HeteroNodeSpec")
+      .def(py::init<const std::vector<SingleNodeSpec>&>())
+      .def_readonly("_node_specs", &HeteroNodeSpec::node_specs);
+
+  py::class_<HeteroPipelineTemplate>(m, "HeteroPipelineTemplate")
+    .def(py::init<const std::vector<std::shared_ptr<StageExecutionResult>>&,
+                 const int, const HeteroNodeSpec&>())
+    .def("get_stages", &HeteroPipelineTemplate::get_stages)
+    .def("get_node_spec", &HeteroPipelineTemplate::get_node_spec);
+
   py::class_<PipelineTemplateGenerator>(m, "PipelineTemplateGenerator")
       .def(py::init<>())
       .def("create_pipeline_templates",

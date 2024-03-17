@@ -22,10 +22,14 @@ struct SingleNodeSpec {
   int num_nodes;
   int num_gpus_per_node;
   double compute_power;
+  // memory
+  SingleNodeSpec(std::string node_type, int num_nodes, int num_gpus_per_node, double compute_power)
+      : node_type(node_type), num_nodes(num_nodes), num_gpus_per_node(num_gpus_per_node), compute_power(compute_power) {}
 };
 
 struct HeteroNodeSpec {
   std::vector<SingleNodeSpec> node_specs;
+  HeteroNodeSpec(std::vector<SingleNodeSpec> node_specs) : node_specs(node_specs) {}
 };
 
 class HeteroPipelineTemplate {
