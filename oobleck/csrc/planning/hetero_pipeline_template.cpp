@@ -16,7 +16,7 @@
 #include <pybind11/pybind11.h>
 #endif
 
-#define DEBUG
+// #define DEBUG
 
 /**
  * Extension of Section 4.1.2. GPU-Stage Mapping using divide and conquer
@@ -135,13 +135,37 @@ PipelineTemplateGenerator::create_hetero_pipeline_template(
         node_spec));
   }
 
-  for (auto &task : num_stages_tasks) {
-    std::cout << "Waiting for tasks " << std::endl;
-    std::shared_ptr<DCExecutionResult> result = cppcoro::sync_wait(task);
-    std::cout << "Wait done" << std::endl;
+  std::cout << "Waiting for tasks" << std::endl;
+  std::vector<std::shared_ptr<DCExecutionResult>> results =
+      cppcoro::sync_wait(cppcoro::when_all(std::move(num_stages_tasks)));
+  std::cout << "Wait done" << std::endl;
+
+  std::cout << "Cache hit: " << cache_hit_.load()
+            << ", miss: " << cache_miss_.load() << std::endl;
+
+  if (std::all_of(results.begin(), results.end(),
+                  [](const std::shared_ptr<DCExecutionResult> &result)
+                      -> bool { return result == nullptr; })) {
+    std::cout << "All results are invalid" << std::endl;
   }
 
-  return HeteroPipelineTemplate();
+  auto optimal_result = [&]() -> std::shared_ptr<DCExecutionResult> {
+      std::shared_ptr<DCExecutionResult> result(nullptr);
+      for (int i = 0; i < results.size(); i++) {
+        if (result == nullptr) {
+          result = results[i];
+        } else if (results[i] != nullptr &&
+                   results[i]->get_t() < result->get_t()) {
+          result = results[i];
+        }
+      }
+      return result;
+    }();
+
+  assert(optimal_result != nullptr &&
+           optimal_result->get_stages().size() > 0);
+  return HeteroPipelineTemplate(optimal_result->get_stages(), layer_count,
+                                node_spec);
 }
 
 cppcoro::task<std::shared_ptr<DCExecutionResult>>
@@ -160,8 +184,8 @@ PipelineTemplateGenerator::divide_and_conquer(
   DCExecutionResult::key key =
       std::make_tuple(num_stages, start_layer_index, end_layer_index,
                       node_spec.get_cache_key());
-  std::cout << "ENTER FUNCTION: layer indices: " << start_layer_index << " " << end_layer_index
-            << "num_stages: " << num_stages << "node_spec: " << node_spec.to_string() << std::endl;
+  // std::cout << "ENTER FUNCTION: layer indices: " << start_layer_index << " " << end_layer_index
+  //           << "num_stages: " << num_stages << "node_spec: " << node_spec.to_string() << std::endl;
 
   // Return cached result if it exists
   auto it = dc_cache_.find(key);
@@ -190,20 +214,20 @@ PipelineTemplateGenerator::divide_and_conquer(
     num_gpus = node_spec.node_specs[node_spec.idx_to_only_node].num_gpus;
     if (num_gpus < num_stages) {
       // At least one GPU should be assigned to each stage
-      std::cout << "infeasible: num_gpus < num_stages" << std::endl;
+      // std::cout << "infeasible: num_gpus < num_stages" << std::endl;
       infeasible = true;
     }
 
     double log_num_gpus = log2(num_gpus);
     if (num_stages == 1 && log_num_gpus != trunc(log_num_gpus)) {
-      std::cout << "infeasible: num_stages == 1 && log_num_gpus != "
-                   "trunc(log_num_gpus)"
-                << std::endl;
+      // std::cout << "infeasible: num_stages == 1 && log_num_gpus != "
+      //              "trunc(log_num_gpus)"
+      //           << std::endl;
       infeasible = true;
     }
   } else if (num_total_nodes > num_stages) {
     // Two or more node cannot be assigned to the same stage
-    std::cout << "infeasible: num_total_nodes > num_stages" << std::endl;
+    // std::cout << "infeasible: num_total_nodes > num_stages" << std::endl;
     infeasible = true;
   }
 
@@ -215,7 +239,7 @@ PipelineTemplateGenerator::divide_and_conquer(
 
   // Base case (conquer phase)
   if (num_stages == 1) {
-    std::cout << "entering base case" << std::endl;
+    // std::cout << "entering base case" << std::endl;
     assert(num_total_nodes == 1);
     num_gpus = node_spec.node_specs[node_spec.idx_to_only_node].num_gpus;
     int node_type_idx =
@@ -296,10 +320,10 @@ PipelineTemplateGenerator::divide_and_conquer(
           generateSubsets(node_spec);
       for (auto &node_spec_subset_left : all_node_spec_subsets) {
         auto node_spec_subset_right = node_spec.subtract(node_spec_subset_left);
-        std::cout << "origin " << node_spec.to_string() << std::endl;
-        std::cout << "left " << node_spec_subset_left.to_string() << std::endl;
-        std::cout << "right " << node_spec_subset_right.to_string()
-                  << std::endl;
+        // std::cout << "origin " << node_spec.to_string() << std::endl;
+        // std::cout << "left " << node_spec_subset_left.to_string() << std::endl;
+        // std::cout << "right " << node_spec_subset_right.to_string()
+                  // << std::endl;
         for (int num_stages_left :
              std::ranges::iota_view<int, int>(1, num_stages)) {
 
