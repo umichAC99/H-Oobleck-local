@@ -24,6 +24,8 @@ from oobleck.csrc.planning.pipeline_template import (
     LayerExecutionResults,
     PipelineTemplate,
     StageExecutionResult,
+    HeteroNodeSpec,
+    NodeConfig,
 )
 from oobleck.execution.dataloader import LoaderType, OobleckDataLoader
 from oobleck.execution.dataset import OobleckDataset
@@ -140,6 +142,42 @@ class OobleckStaticClassFactory:
             self._profile = LayerExecutionResults(results)
 
         return self._profile
+    
+    def get_dummy_hetero_profile(self) -> list[LayerExecutionResults]:
+        self.get_model()
+
+        results: list[LayerExecutionResults] = []
+        for i in range(3):
+            num_layers = len(self._model.layers)
+
+            layer_results: list[LayerExecutionResult] = []
+            for index in range(num_layers):
+                layer_results.append(
+                    LayerExecutionResult(
+                        layer_index=index,
+                        forward=random.random(),
+                        backward=random.random() * 3,
+                        allreduce_in_node={i + 1: random.random() for i in range(8)},
+                        allreduce_across_nodes={
+                            i + 1: random.random() * 4 for i in range(64)
+                        },
+                        mem_required=(1024, 1024),
+                    )
+                )
+
+            results.append(LayerExecutionResults(layer_results))
+
+        return results
+    
+    def get_dummy_hetero_node_spec(self) -> HeteroNodeSpec:
+
+        return HeteroNodeSpec(
+            [
+                NodeConfig("A100", 1, 2, 1.0),
+                NodeConfig("V100", 2, 2, 0.8),
+                NodeConfig("B100", 2, 2, 1.2)
+            ]
+        )
 
     def get_dummy_pipeline_template(
         self,

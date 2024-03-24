@@ -6,6 +6,7 @@
 #include <memory>
 #include <tuple>
 #include <vector>
+#include <cassert>
 
 namespace oobleck {
 
@@ -63,8 +64,8 @@ class StageExecutionResult
   StageExecutionResult(
       const std::shared_ptr<LayerExecutionResults> layer_results,
       const std::tuple<int, int>& layer_indices,
-      const int num_gpus)
-      : num_gpus_(num_gpus) {
+      const int num_gpus, const int node_type_idx = 0)
+      : num_gpus_(num_gpus), node_type_idx_(node_type_idx) {
     int layer_start_index = std::get<0>(layer_indices);
     int layer_end_index = std::get<1>(layer_indices);
     assert(layer_end_index <= layer_results->size());
@@ -100,7 +101,7 @@ class StageExecutionResult
     int last_layer_index = layer_indices_.back();
     return "StageExecutionResult[" + std::to_string(first_layer_index) + ":" +
            std::to_string(last_layer_index) + "] with " +
-           std::to_string(num_gpus_) + " devices";
+           std::to_string(num_gpus_) + " devices on node type " + std::to_string(node_type_idx_);
   }
 
   int num_gpus_;
@@ -109,20 +110,27 @@ class StageExecutionResult
   double backward_;
   std::map<int, double> allreduce_across_nodes_;
   int mem_required_;
+  const int node_type_idx_;
 };
 
 class DCExecutionResult {
  public:
-  // # stage, start layer index, end layer index, num nodes, num GPUs per node
-  using key = std::tuple<int, int, int, int, int>;
+  // # stage, start layer index, end layer index, device indices
+  using key = std::tuple<int, int, int, std::string>;
+
+  static std::string get_device_indices_key(const int num_nodes,
+                                     const int num_gpus_per_node,
+                                     const int node_type_indices) {
+    std::string result = std::to_string(num_nodes) + "x" + std::to_string(num_gpus_per_node) + "x" + std::to_string(node_type_indices);
+    return result;
+  }
 
   struct KeyHash {
     std::size_t operator()(const key& key) const {
       std::string string_key = std::to_string(std::get<0>(key)) + "[" +
                                std::to_string(std::get<1>(key)) + "-" +
                                std::to_string(std::get<2>(key)) + "]" +
-                               std::to_string(std::get<3>(key)) + "x" +
-                               std::to_string(std::get<4>(key));
+                                std::get<3>(key);
       return std::hash<std::string>()(string_key);
     }
   };
@@ -132,20 +140,16 @@ class DCExecutionResult {
       return std::get<0>(key1) == std::get<0>(key2) &&
              std::get<1>(key1) == std::get<1>(key2) &&
              std::get<2>(key1) == std::get<2>(key2) &&
-             std::get<3>(key1) == std::get<3>(key2) &&
-             std::get<4>(key1) == std::get<4>(key2);
+             std::get<3>(key1) == std::get<3>(key2);
     }
   };
 
   // Basic constructor
-  DCExecutionResult(std::shared_ptr<StageExecutionResult> stage,
-                    int num_nodes,
-                    int num_gpus_per_node)
+  DCExecutionResult(std::shared_ptr<StageExecutionResult> stage)
       : t1_(stage->forward_ + stage->backward_),
         t2_(2 * (stage->forward_ + stage->backward_)),
         t3_(stage->forward_ + stage->backward_),
-        num_nodes_(num_nodes),
-        num_gpus_per_node_(num_gpus_per_node),
+        node_type_indices_(std::string{char(stage->node_type_idx_ + '0')}),
         kstar_(0),
         stages_({stage}) {
     assert(stage != nullptr);
@@ -153,12 +157,8 @@ class DCExecutionResult {
 
   // Combine constructor
   DCExecutionResult(const std::shared_ptr<DCExecutionResult> left,
-                    const std::shared_ptr<DCExecutionResult> right,
-                    int num_nodes,
-                    int num_gpus_per_node)
-      : num_nodes_(num_nodes),
-        num_gpus_per_node_(num_gpus_per_node),
-        stages_(left->stages_) {
+                    const std::shared_ptr<DCExecutionResult> right)
+      : stages_(left->stages_) {
     assert(left->stages_.size() > 0 && right->stages_.size() > 0);
 
     kstar_ = left->get_kstar_latency() > right->get_kstar_latency()
@@ -185,6 +185,7 @@ class DCExecutionResult {
     t3_ = latency;
 
     stages_.insert(stages_.end(), right->stages_.begin(), right->stages_.end());
+    node_type_indices_ = left->node_type_indices_ + right->node_type_indices_;
   }
 
   double get_t() const { return t1_ + t2_ + t3_; }
@@ -198,8 +199,7 @@ class DCExecutionResult {
  private:
   int kstar_;
   double t1_, t2_, t3_;
-  int num_nodes_;
-  int num_gpus_per_node_;
+  std::string node_type_indices_;
   std::vector<std::shared_ptr<StageExecutionResult>> stages_;
 };
 

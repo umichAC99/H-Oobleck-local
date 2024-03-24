@@ -26,22 +26,27 @@ namespace oobleck {
 // CacheMap PipelineTemplateGenerator::dc_cache_;
 // cppcoro::static_thread_pool PipelineTemplateGenerator::thread_pool_;
 
-std::shared_ptr<LayerExecutionResults> get_profile_results(
-    const std::string& model_name,
-    const std::string& model_tag,
-    const int microbatch_size) {
-  auto get_cache = [](const std::string& cache_path) -> nlohmann::json {
+std::shared_ptr<LayerExecutionResults>
+get_profile_results(const std::string &model_name, const std::string &model_tag,
+                    const int microbatch_size, const std::string &node_type) {
+  auto get_cache = [](const std::string &cache_path) -> nlohmann::json {
     std::ifstream ifs(cache_path);
     assert(ifs.is_open());
     try {
       return nlohmann::json::parse(ifs);
-    } catch (std::exception& e) {
+    } catch (std::exception &e) {
       throw pybind11::value_error("Error parsing json file: " + cache_path);
     }
   };
 
-  std::string profile_path =
-      "/tmp/oobleck/profiles/" + model_name + "-" + model_tag;
+  std::string profile_path;
+  if (node_type == "") {
+    profile_path = "/tmp/oobleck/profiles/" + model_name + "-" + model_tag;
+  } else {
+    profile_path = "/tmp/oobleck/profiles/" + node_type + "-" + model_name +
+                   "-" + model_tag + "-";
+  }
+
   auto mb = get_cache(profile_path + "/mb" + std::to_string(microbatch_size) +
                       ".json");
   auto allreduce_in_node = get_cache(profile_path + "/allreduce_in_node.json");
@@ -59,11 +64,11 @@ std::shared_ptr<LayerExecutionResults> get_profile_results(
   std::vector<LayerExecutionResult> layer_execution_results;
   for (int i = 0; i < num_layers; i++) {
     std::map<int, double> allreduce_in_node_map;
-    for (auto& [key, value] : allreduce_in_node[i].items()) {
+    for (auto &[key, value] : allreduce_in_node[i].items()) {
       allreduce_in_node_map[std::stoi(key)] = value;
     }
     std::map<int, double> allreduce_across_nodes_map;
-    for (auto& [key, value] : allreduce_across_nodes[i].items()) {
+    for (auto &[key, value] : allreduce_across_nodes[i].items()) {
       allreduce_across_nodes_map[std::stoi(key)] = value;
     }
 
@@ -82,8 +87,7 @@ std::shared_ptr<LayerExecutionResults> get_profile_results(
 std::vector<PipelineTemplate>
 PipelineTemplateGenerator::create_pipeline_templates(
     std::shared_ptr<LayerExecutionResults> layer_execution_results,
-    const std::tuple<int, int>& num_nodes,
-    const int num_gpus_per_node) {
+    const std::tuple<int, int> &num_nodes, const int num_gpus_per_node) {
   int min_num_nodes = std::get<0>(num_nodes);
   int max_num_nodes = std::get<1>(num_nodes);
 #ifdef PYBIND11_MODULE
@@ -114,7 +118,7 @@ PipelineTemplateGenerator::create_pipeline_templates(
   // tasks.rend();
   // for (auto&& num_node_tasks = tasks.begin(); num_node_tasks != tasks.end();
   //      num_node_tasks++) {
-  for (auto&& num_node_tasks : tasks) {
+  for (auto &&num_node_tasks : tasks) {
     std::cout << "Waiting for tasks for " << num_node_tasks.first << " nodes"
               << std::endl;
     std::vector<std::shared_ptr<DCExecutionResult>> results =
@@ -125,7 +129,7 @@ PipelineTemplateGenerator::create_pipeline_templates(
               << ", miss: " << cache_miss_.load() << std::endl;
 
     if (std::all_of(results.begin(), results.end(),
-                    [](const std::shared_ptr<DCExecutionResult>& result)
+                    [](const std::shared_ptr<DCExecutionResult> &result)
                         -> bool { return result == nullptr; })) {
       std::cout << "All results are invalid" << std::endl;
       continue;
@@ -166,10 +170,8 @@ PipelineTemplateGenerator::create_pipeline_templates(
 cppcoro::task<std::shared_ptr<DCExecutionResult>>
 PipelineTemplateGenerator::divide_and_conquer(
     std::shared_ptr<LayerExecutionResults> layer_execution_results,
-    const std::tuple<int, int> layer_indices,
-    const int num_stages,
-    const int num_nodes,
-    const int num_gpus_per_node) {
+    const std::tuple<int, int> layer_indices, const int num_stages,
+    const int num_nodes, const int num_gpus_per_node) {
   co_await thread_pool_.schedule();
 
   int start_layer_index = std::get<0>(layer_indices);
@@ -177,8 +179,9 @@ PipelineTemplateGenerator::divide_and_conquer(
 
   std::shared_ptr<DCExecutionResult> result(nullptr);
   DCExecutionResult::key key =
-      std::make_tuple(num_stages, start_layer_index, end_layer_index, num_nodes,
-                      num_gpus_per_node);
+      std::make_tuple(num_stages, start_layer_index, end_layer_index,
+                      DCExecutionResult::get_device_indices_key(
+                          num_nodes, num_gpus_per_node, 0));
 
   // Return cached result if it exists
   auto it = dc_cache_.find(key);
@@ -225,8 +228,7 @@ PipelineTemplateGenerator::divide_and_conquer(
     // If there is only one stage, assign all layers to that stage
     auto stage = std::make_shared<StageExecutionResult>(
         layer_execution_results, layer_indices, num_gpus_per_node);
-    auto result = std::make_shared<DCExecutionResult>(stage, num_nodes,
-                                                      num_gpus_per_node);
+    auto result = std::make_shared<DCExecutionResult>(stage);
     dc_cache_.insert({key, result});
     // accessor->second = result;
     co_return result;
@@ -248,8 +250,10 @@ PipelineTemplateGenerator::divide_and_conquer(
           std::shared_ptr<DCExecutionResult> result_left(nullptr);
           std::shared_ptr<DCExecutionResult> result_right(nullptr);
 
-          auto key_left = std::make_tuple(num_stages_left, start_layer_index, k,
-                                          num_nodes, num_gpus_left);
+          auto key_left =
+              std::make_tuple(num_stages_left, start_layer_index, k,
+                              DCExecutionResult::get_device_indices_key(
+                                  num_nodes, num_gpus_left, 0));
 
           auto it = dc_cache_.find(key_left);
           if (it != dc_cache_.end()) {
@@ -260,9 +264,10 @@ PipelineTemplateGenerator::divide_and_conquer(
                 num_stages_left, num_nodes, num_gpus_left);
           }
 
-          auto key_right =
-              std::make_tuple(num_stages - num_stages_left, k, end_layer_index,
-                              num_nodes, num_gpus_per_node - num_gpus_left);
+          auto key_right = std::make_tuple(
+              num_stages - num_stages_left, k, end_layer_index,
+              DCExecutionResult::get_device_indices_key(
+                  num_nodes, num_gpus_per_node - num_gpus_left, 0));
 
           it = dc_cache_.find(key_right);
           if (it != dc_cache_.end()) {
@@ -279,7 +284,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           }
 
           auto new_result = std::make_shared<DCExecutionResult>(
-              result_left, result_right, num_nodes, num_gpus_per_node);
+              result_left, result_right);
           if (result == nullptr || new_result->get_t() < result->get_t()) {
             result = new_result;
           }
@@ -294,11 +299,16 @@ PipelineTemplateGenerator::divide_and_conquer(
           std::shared_ptr<DCExecutionResult> result_left(nullptr);
           std::shared_ptr<DCExecutionResult> result_right(nullptr);
 
-          auto key_left = std::make_tuple(num_stages_left, start_layer_index, k,
-                                          num_nodes_left, num_gpus_per_node);
-
+          auto key_left =
+              std::make_tuple(num_stages_left, start_layer_index, k,
+                              DCExecutionResult::get_device_indices_key(
+                                  num_nodes_left, num_gpus_per_node, 0));
+          
           auto it = dc_cache_.find(key_left);
           if (it != dc_cache_.end()) {
+            // std::cout << "found left" << std::endl;
+            // std::cout << "key left: " << std::get<0>(key_left) << " " << std::get<1>(key_left) << " "
+            // << std::get<2>(key_left) << " " << std::get<3>(key_left) << std::endl;
             result_left = it->second;
           } else {
             result_left = co_await divide_and_conquer(
@@ -306,13 +316,18 @@ PipelineTemplateGenerator::divide_and_conquer(
                 num_stages_left, num_nodes_left, num_gpus_per_node);
           }
 
-          auto key_right =
-              std::make_tuple(num_stages - num_stages_left, k, end_layer_index,
-                              num_nodes - num_nodes_left, num_gpus_per_node);
+          auto key_right = std::make_tuple(
+              num_stages - num_stages_left, k, end_layer_index,
+              DCExecutionResult::get_device_indices_key(
+                  num_nodes - num_nodes_left, num_gpus_per_node, 0));
 
           it = dc_cache_.find(key_right);
           if (it != dc_cache_.end()) {
             result_right = it->second;
+            // std::cout << "found right" << std::endl;
+            // std::cout << "key right: " << std::get<0>(key_right) << " " << std::get<1>(key_right) << " "
+            // << std::get<2>(key_right) << " " << std::get<3>(key_right) << std::endl;
+
           } else {
             result_right = co_await divide_and_conquer(
                 layer_execution_results, std::make_tuple(k, end_layer_index),
@@ -325,7 +340,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           }
 
           auto new_result = std::make_shared<DCExecutionResult>(
-              result_left, result_right, num_nodes, num_gpus_per_node);
+              result_left, result_right);
           if (result == nullptr || new_result->get_t() < result->get_t()) {
             result = new_result;
           }
@@ -338,4 +353,4 @@ PipelineTemplateGenerator::divide_and_conquer(
   co_return result;
 }
 
-}  // namespace oobleck
+} // namespace oobleck
