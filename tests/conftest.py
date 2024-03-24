@@ -117,6 +117,19 @@ class OobleckStaticClassFactory:
             )
 
         return self._model
+    
+    # Takes in a list of LayerExecutionResults and a HeteroNodeSpec and returns a tuple of the number of nodes, number of gpus per node, and a list of scaling factors
+    def dummy_node_folding(self, profiles: list[LayerExecutionResults], node_spec: HeteroNodeSpec) -> tuple[int, int, list[float]]:
+        forward_cost_sums = [
+            sum([layer._forward for layer in profile.get()]) for profile in profiles
+        ]
+        max_forward_cost = max(forward_cost_sums)
+        scaling_factors = [max_forward_cost / forward_cost for forward_cost in forward_cost_sums]
+        num_nodes = 0.0
+        for i in range(len(node_spec._node_specs)):
+            num_nodes += node_spec._node_specs[i]._num_nodes * scaling_factors[i]
+        
+        return (int(num_nodes), node_spec._node_specs[0]._num_gpus, scaling_factors)
 
     def get_dummy_profile(self) -> LayerExecutionResults:
         self.get_model()

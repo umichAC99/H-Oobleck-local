@@ -116,11 +116,15 @@ PYBIND11_MODULE(pipeline_template, m) {
 
   py::class_<HeteroPipelineTemplate>(m, "HeteroPipelineTemplate")
       .def(py::init<const std::vector<std::shared_ptr<StageExecutionResult>> &,
+                    const double,
                     const int, const HeteroNodeSpec &>())
       .def("get_stages", &HeteroPipelineTemplate::get_stages)
       .def("get_node_spec", &HeteroPipelineTemplate::get_node_spec)
+      .def_property_readonly("_iteration_time",
+                             &HeteroPipelineTemplate::get_iteration_time)
       .def("__repr__", [](const HeteroPipelineTemplate &hpt) {
         std::string repr = "<oobleck.HeteroPipelineTemplate.[";
+        repr += "t: " + std::to_string(hpt.get_iteration_time()) + ", ";
         repr += "stages: [";
         for (const auto &stage : hpt.get_stages()) {
           repr += stage->to_string() + ", ";

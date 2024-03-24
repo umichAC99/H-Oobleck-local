@@ -13,10 +13,22 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         return self.factory.get_dummy_profile()   
         
     def test_node_folding(self):
+        generator = PipelineTemplateGenerator()
         node_spec = self.factory.get_dummy_hetero_node_spec()
         profiles = self.factory.get_dummy_profile_by_scaling(node_spec)
         print(node_spec)
         print(profiles)
+        print("LOG: running ground truth")
+        pipeline_template = generator.create_hetero_pipeline_template(
+            profiles,
+            node_spec,
+        )
+        print(pipeline_template)
+        print("LOG: running node folding")
+        (num_nodes, num_gpus_per_node, scaling_factors) = self.factory.dummy_node_folding(profiles, node_spec)
+        print("num_nodes: ", num_nodes)
+        print("num_gpus_per_node: ", num_gpus_per_node)
+        print("scaling_factors: ", scaling_factors)
         
     
     @pytest.mark.skip(reason="Skipped")
