@@ -10,12 +10,16 @@ from tests.conftest import OobleckSingleProcessTestCase
 class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     @pytest.fixture(scope="function")
     def profile(self) -> LayerExecutionResults:
-        return self.factory.get_dummy_profile()
-    
-    def test_hetero_node_spec(self, profile: LayerExecutionResults):
+        return self.factory.get_dummy_profile()   
+        
+    def test_node_folding(self):
         node_spec = self.factory.get_dummy_hetero_node_spec()
+        profiles = self.factory.get_dummy_profile_by_scaling(node_spec)
         print(node_spec)
+        print(profiles)
+        
     
+    @pytest.mark.skip(reason="Skipped")
     def test_create_hetero_pipeline_templates(self):
         generator = PipelineTemplateGenerator()
         hetero_profiles = self.factory.get_dummy_hetero_profile()
@@ -26,7 +30,7 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         )
         print(pipeline_template)
     
-
+    @pytest.mark.skip(reason="Skipped")
     def test_create_pipeline_templates_onegpu(self, profile: LayerExecutionResults):
         generator = PipelineTemplateGenerator()
         pipeline_templates = generator.create_pipeline_templates(

@@ -129,8 +129,8 @@ class OobleckStaticClassFactory:
                 results.append(
                     LayerExecutionResult(
                         layer_index=index,
-                        forward=abs(random.random()),
-                        backward=abs(random.random() * 3),
+                        forward=abs(random.random()) + 1.0,
+                        backward=abs(random.random() * 3) + 1.0,
                         allreduce_in_node={i + 1: random.random() for i in range(8)},
                         allreduce_across_nodes={
                             i + 1: random.random() * 4 for i in range(64)
@@ -155,8 +155,8 @@ class OobleckStaticClassFactory:
                 layer_results.append(
                     LayerExecutionResult(
                         layer_index=index,
-                        forward=abs(random.random()),
-                        backward=abs(random.random() * 3),
+                        forward=abs(random.random())+1.0,
+                        backward=abs(random.random() * 3)+1.0,
                         allreduce_in_node={i + 1: random.random() for i in range(8)},
                         allreduce_across_nodes={
                             i + 1: random.random() * 4 for i in range(64)
@@ -174,10 +174,41 @@ class OobleckStaticClassFactory:
         return HeteroNodeSpec(
             [
                 NodeConfig("A100", 1, 2, 1.0),
-                NodeConfig("V100", 2, 2, 0.8),
-                NodeConfig("B100", 2, 2, 1.2)
+                NodeConfig("H100", 2, 2, 2.0),
+                NodeConfig("B100", 2, 2, 4.0)
             ]
         )
+        
+    def get_dummy_profile_by_scaling(self, node_spec: HeteroNodeSpec) -> list[LayerExecutionResults]:
+        #Assume node_spec[0] is the weakest one
+        result = []
+        weakest_layer_results = self.get_dummy_profile().get()
+        for i in range(0, len(weakest_layer_results)):
+            weakest_layer_results[i] = LayerExecutionResult(
+                layer_index=weakest_layer_results[i]._index,
+                forward=weakest_layer_results[i]._forward * 10.0,
+                backward=weakest_layer_results[i]._backward * 10.0,
+                allreduce_in_node=weakest_layer_results[i]._allreduce_in_node,
+                allreduce_across_nodes=weakest_layer_results[i]._allreduce_across_nodes,
+                mem_required=weakest_layer_results[i]._mem_required
+            )
+        result.append(LayerExecutionResults(weakest_layer_results))
+        
+        # Iterate over other node types, append scaled layer results to result by computing power
+        for i in range(1, len(node_spec._node_specs)):
+            layer_results = [layer for layer in weakest_layer_results]
+            for j in range(len(layer_results)):
+                layer_results[j] = LayerExecutionResult(
+                    layer_index=layer_results[j]._index,
+                    forward=layer_results[j]._forward * 1.0/node_spec._node_specs[i]._compute_power,
+                    backward=layer_results[j]._backward * 1.0/node_spec._node_specs[i]._compute_power,
+                    allreduce_in_node=layer_results[j]._allreduce_in_node,
+                    allreduce_across_nodes=layer_results[j]._allreduce_across_nodes,
+                    mem_required=layer_results[j]._mem_required
+                )
+            result.append(LayerExecutionResults(layer_results))
+        return result
+        
 
     def get_dummy_pipeline_template(
         self,

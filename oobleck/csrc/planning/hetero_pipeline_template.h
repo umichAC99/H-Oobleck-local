@@ -32,9 +32,10 @@ struct NodeConfig {
   int node_type_idx;
   int num_nodes;
   int num_gpus;
+  double compute_power;
   // memory
   NodeConfig(std::string node_type, int num_nodes, int num_gpus_per_node, double compute_power)
-      : num_nodes(num_nodes), num_gpus(num_gpus_per_node) {
+      : num_nodes(num_nodes), num_gpus(num_gpus_per_node), compute_power(compute_power) {
         if (node_specs_map.find(node_type) == node_specs_map.end()) {
           node_specs.push_back(SingleNodeSpec(node_type, num_gpus_per_node, compute_power));
           node_specs_map[node_type] = node_specs.size() - 1;
