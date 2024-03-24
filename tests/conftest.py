@@ -129,8 +129,8 @@ class OobleckStaticClassFactory:
                 results.append(
                     LayerExecutionResult(
                         layer_index=index,
-                        forward=random.random(),
-                        backward=random.random() * 3,
+                        forward=abs(random.random()),
+                        backward=abs(random.random() * 3),
                         allreduce_in_node={i + 1: random.random() for i in range(8)},
                         allreduce_across_nodes={
                             i + 1: random.random() * 4 for i in range(64)
@@ -155,8 +155,8 @@ class OobleckStaticClassFactory:
                 layer_results.append(
                     LayerExecutionResult(
                         layer_index=index,
-                        forward=random.random(),
-                        backward=random.random() * 3,
+                        forward=abs(random.random()),
+                        backward=abs(random.random() * 3),
                         allreduce_in_node={i + 1: random.random() for i in range(8)},
                         allreduce_across_nodes={
                             i + 1: random.random() * 4 for i in range(64)

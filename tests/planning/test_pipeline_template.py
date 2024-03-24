@@ -27,19 +27,19 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         print(pipeline_template)
     
 
-    @pytest.mark.skip(reason="Skipped")
     def test_create_pipeline_templates_onegpu(self, profile: LayerExecutionResults):
         generator = PipelineTemplateGenerator()
         pipeline_templates = generator.create_pipeline_templates(
             profile,
-            (1, 1),  # num nodes range
-            1,
+            (8, 8),  # num nodes range
+            4,
         )
         assert len(pipeline_templates) == 1
-        assert pipeline_templates[0]._num_nodes == 1
-        assert pipeline_templates[0]._num_gpus_per_node == 1
-        assert len(pipeline_templates[0].get_stages()) == 1
+        assert pipeline_templates[0]._num_nodes == 8
+        assert pipeline_templates[0]._num_gpus_per_node == 4
+        # assert len(pipeline_templates[0].get_stages()) == 1
         assert pipeline_templates[0]._iteration_time > 0
+        print(pipeline_templates[0])
 
     @pytest.mark.skip(reason="Skipped")
     def test_create_pipeline_templates_maxnode(self, profile: LayerExecutionResults):
