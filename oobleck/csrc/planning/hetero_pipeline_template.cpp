@@ -57,6 +57,8 @@ void generateSubsetsUtil(const HeteroNodeSpec &originalSpec,
   }
 }
 
+
+// enumerate all possible subsets of the original cluster set
 std::vector<HeteroNodeSpec> generateSubsets(const HeteroNodeSpec &heteroSpec) {
   std::vector<HeteroNodeSpec> allSubsets;
   HeteroNodeSpec currentSubset = heteroSpec;
@@ -184,8 +186,6 @@ PipelineTemplateGenerator::divide_and_conquer(
   DCExecutionResult::key key =
       std::make_tuple(num_stages, start_layer_index, end_layer_index,
                       node_spec.get_cache_key());
-  // std::cout << "ENTER FUNCTION: layer indices: " << start_layer_index << " " << end_layer_index
-  //           << "num_stages: " << num_stages << "node_spec: " << node_spec.to_string() << std::endl;
 
   // Return cached result if it exists
   auto it = dc_cache_.find(key);
@@ -214,20 +214,14 @@ PipelineTemplateGenerator::divide_and_conquer(
     num_gpus = node_spec.node_specs[node_spec.idx_to_only_node].num_gpus;
     if (num_gpus < num_stages) {
       // At least one GPU should be assigned to each stage
-      // std::cout << "infeasible: num_gpus < num_stages" << std::endl;
       infeasible = true;
     }
 
     double log_num_gpus = log2(num_gpus);
     if (num_stages == 1 && log_num_gpus != trunc(log_num_gpus)) {
-      // std::cout << "infeasible: num_stages == 1 && log_num_gpus != "
-      //              "trunc(log_num_gpus)"
-      //           << std::endl;
       infeasible = true;
     }
   } else if (num_total_nodes > num_stages) {
-    // Two or more node cannot be assigned to the same stage
-    // std::cout << "infeasible: num_total_nodes > num_stages" << std::endl;
     infeasible = true;
   }
 
@@ -239,7 +233,6 @@ PipelineTemplateGenerator::divide_and_conquer(
 
   // Base case (conquer phase)
   if (num_stages == 1) {
-    // std::cout << "entering base case" << std::endl;
     assert(num_total_nodes == 1);
     num_gpus = node_spec.node_specs[node_spec.idx_to_only_node].num_gpus;
     int node_type_idx =
