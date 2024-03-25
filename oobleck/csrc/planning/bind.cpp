@@ -81,8 +81,17 @@ PYBIND11_MODULE(pipeline_template, m) {
       .def_property_readonly("_num_gpus_per_node",
                              &PipelineTemplate::get_num_gpus_per_node)
       .def("__repr__", [](const PipelineTemplate &pt) {
-        return "<oobleck.PipelineTemplate." +
-               std::to_string(pt.get_num_nodes()) + "nodes>";
+        std::string repr = "<oobleck.HomoPipelineTemplate.[";
+        repr += "t: " + std::to_string(pt.get_iteration_time()) + ", ";
+        repr += "stages: [";
+        for (const auto &stage : pt.get_stages()) {
+          repr += stage->to_string() + ", ";
+        }
+        repr.pop_back();
+        repr.pop_back();
+        repr += "], ";
+        repr += "]>";
+        return repr;
       });
 
   py::class_<NodeConfig>(m, "NodeConfig")

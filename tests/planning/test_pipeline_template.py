@@ -29,6 +29,12 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         print("num_nodes: ", num_nodes)
         print("num_gpus_per_node: ", num_gpus_per_node)
         print("scaling_factors: ", scaling_factors)
+        pipeline_template_origin = generator.create_pipeline_templates(
+            profiles[0],
+            (num_nodes, num_nodes),  # num nodes range
+            2,
+        )[0]
+        print(pipeline_template_origin)
         
     
     @pytest.mark.skip(reason="Skipped")
