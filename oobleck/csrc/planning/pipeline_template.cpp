@@ -310,7 +310,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           }
 
           auto new_result = std::make_shared<DCExecutionResult>(
-              result_left, result_right);
+              result_left, result_right, 20*3);
           if (result == nullptr || new_result->get_t() < result->get_t()) {
             result = new_result;
           }
@@ -366,7 +366,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           }
 
           auto new_result = std::make_shared<DCExecutionResult>(
-              result_left, result_right);
+              result_left, result_right, 3 * 20);
           if (result == nullptr || new_result->get_t() < result->get_t()) {
             result = new_result;
           }

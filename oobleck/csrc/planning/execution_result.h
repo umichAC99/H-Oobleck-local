@@ -162,7 +162,7 @@ class DCExecutionResult {
 
   // Combine constructor
   DCExecutionResult(const std::shared_ptr<DCExecutionResult> left,
-                    const std::shared_ptr<DCExecutionResult> right)
+                    const std::shared_ptr<DCExecutionResult> right, const int num_batches = 0)
       : stages_(left->stages_) {
     assert(left->stages_.size() > 0 && right->stages_.size() > 0);
 
@@ -170,8 +170,9 @@ class DCExecutionResult {
                  ? left->kstar_
                  : right->kstar_ + left->stages_.size();
     t1_ = left->t1_ + right->t1_;
-    int num_kstar_stage_microbatch =
-        2 * (left->stages_.size() + right->stages_.size()) + kstar_ + 1;
+    int num_kstar_stage_microbatch =( num_batches == 0) ?
+        2 * (left->stages_.size() + right->stages_.size()) + kstar_ + 1
+        : num_batches - (left->stages_.size() + right->stages_.size()) + kstar_ + 1;
     double latency = 0;
     if (kstar_ == left->kstar_) {
       t2_ = num_kstar_stage_microbatch * left->get_kstar_latency();
