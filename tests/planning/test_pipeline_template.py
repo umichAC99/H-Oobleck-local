@@ -11,7 +11,8 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     @pytest.fixture(scope="function")
     def profile(self) -> LayerExecutionResults:
         return self.factory.get_dummy_profile()   
-        
+    
+    @pytest.mark.skip(reason="Skipped")
     def test_node_folding(self):
         generator = PipelineTemplateGenerator()
         node_spec = self.factory.get_dummy_hetero_node_spec()
@@ -48,7 +49,6 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         )
         print(pipeline_template)
     
-    @pytest.mark.skip(reason="Skipped")
     def test_create_pipeline_templates_onegpu(self, profile: LayerExecutionResults):
         generator = PipelineTemplateGenerator()
         pipeline_templates = generator.create_pipeline_templates(

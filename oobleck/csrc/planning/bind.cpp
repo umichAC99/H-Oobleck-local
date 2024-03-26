@@ -72,7 +72,7 @@ PYBIND11_MODULE(pipeline_template, m) {
 
   py::class_<PipelineTemplate>(m, "PipelineTemplate")
       .def(py::init<const std::vector<std::shared_ptr<StageExecutionResult>> &,
-                    const double, const double, const double,
+                    const double, const double, const double, const double,
                     const double, const int, const int, const int>())
       .def("get_stages", &PipelineTemplate::get_stages)
       .def("get_rank_grid", &PipelineTemplate::get_rank_grid, py::arg("ranks"))
@@ -81,24 +81,13 @@ PYBIND11_MODULE(pipeline_template, m) {
       .def_property_readonly("_t1", &PipelineTemplate::get_t1)
       .def_property_readonly("_t2", &PipelineTemplate::get_t2)
       .def_property_readonly("_t3", &PipelineTemplate::get_t3)
+      .def_property_readonly("_kstar_latency",
+                             &PipelineTemplate::get_kstar_latency)
       .def_property_readonly("_num_nodes", &PipelineTemplate::get_num_nodes)
       .def_property_readonly("_num_gpus_per_node",
                              &PipelineTemplate::get_num_gpus_per_node)
       .def("__repr__", [](const PipelineTemplate &pt) {
-        std::string repr = "<oobleck.HomoPipelineTemplate.[";
-        repr += "t: " + std::to_string(pt.get_iteration_time()) + ", ";
-        repr += "t1: " + std::to_string(pt.get_t1()) + ", ";
-        repr += "t2: " + std::to_string(pt.get_t2()) + ", ";
-        repr += "t3: " + std::to_string(pt.get_t3()) + ", ";
-        repr += "stages: [";
-        for (const auto &stage : pt.get_stages()) {
-          repr += stage->to_string() + ", ";
-        }
-        repr.pop_back();
-        repr.pop_back();
-        repr += "], ";
-        repr += "]>";
-        return repr;
+        return pt.to_string();
       });
 
   py::class_<NodeConfig>(m, "NodeConfig")
@@ -132,7 +121,7 @@ PYBIND11_MODULE(pipeline_template, m) {
 
   py::class_<HeteroPipelineTemplate>(m, "HeteroPipelineTemplate")
       .def(py::init<const std::vector<std::shared_ptr<StageExecutionResult>> &,
-                    const double, const double, const double,
+                    const double, const double, const double, const double,
                     const double,
                     const int, const HeteroNodeSpec &>())
       .def("get_stages", &HeteroPipelineTemplate::get_stages)
@@ -142,21 +131,10 @@ PYBIND11_MODULE(pipeline_template, m) {
       .def_property_readonly("_t1", &HeteroPipelineTemplate::get_t1)
       .def_property_readonly("_t2", &HeteroPipelineTemplate::get_t2)
       .def_property_readonly("_t3", &HeteroPipelineTemplate::get_t3)
+      .def_property_readonly("_kstar_latency",
+                             &HeteroPipelineTemplate::get_kstar_latency)
       .def("__repr__", [](const HeteroPipelineTemplate &hpt) {
-        std::string repr = "<oobleck.HeteroPipelineTemplate.[";
-        repr += "t: " + std::to_string(hpt.get_iteration_time()) + ", ";
-        repr += "t1: " + std::to_string(hpt.get_t1()) + ", ";
-        repr += "t2: " + std::to_string(hpt.get_t2()) + ", ";
-        repr += "t3: " + std::to_string(hpt.get_t3()) + ", ";
-        repr += "stages: [";
-        for (const auto &stage : hpt.get_stages()) {
-          repr += stage->to_string() + ", ";
-        }
-        repr.pop_back();
-        repr.pop_back();
-        repr += "], ";
-        repr += "]>";
-        return repr;
+        return hpt.to_string();
       });
 
   py::class_<PipelineTemplateGenerator>(m, "PipelineTemplateGenerator")

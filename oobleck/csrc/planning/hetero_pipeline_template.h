@@ -15,6 +15,8 @@
 #include <tuple>
 #include <vector>
 
+#define DEBUG_PIPELINE_TEMPLATE
+
 namespace oobleck {
 
 struct SingleNodeSpec {
@@ -115,12 +117,14 @@ public:
       const double t1,
       const double t2,
       const double t3,
+      const double kstar_lat,
       const double iteration_time,
       int num_layers, const HeteroNodeSpec &node_spec)
       : stage_execution_results_(stage_execution_results),
         t1_(t1),
         t2_(t2),
         t3_(t3),
+        kstar_lat_(kstar_lat),
         iteration_time_(iteration_time),
         node_spec_(node_spec) {
     // Run divide and conquer to create a vector of StageExecutionResult
@@ -148,7 +152,26 @@ public:
   const double get_t1() const { return t1_; }
   const double get_t2() const { return t2_; }
   const double get_t3() const { return t3_; }
+  const double get_kstar_latency() const { return kstar_lat_; }
   const double get_iteration_time() const { return iteration_time_; }
+  std::string to_string() const{
+    std::string repr = "<oobleck.HeteroPipelineTemplate.[";
+    repr += "t: " + std::to_string(get_iteration_time()) + ", ";
+    repr += "t1: " + std::to_string(get_t1()) + ", ";
+    repr += "t2: " + std::to_string(get_t2()) + ", ";
+    repr += "t3: " + std::to_string(get_t3()) + ", ";
+    repr += "kstar_latency: " + std::to_string(get_kstar_latency()) + ", ";
+    repr += "stages: [";
+    for (const auto &stage : get_stages()) {
+      repr += stage->to_string() + ", ";
+    }
+    repr.pop_back();
+    repr.pop_back();
+    repr += "], ";
+    repr += "node_spec: " + get_node_spec().to_string();
+    repr += "]>";
+    return repr;
+  }
 
   const std::vector<std::shared_ptr<StageExecutionResult>> &get_stages() const {
     return stage_execution_results_;
@@ -161,6 +184,7 @@ private:
   const double t1_;
   const double t2_;
   const double t3_;
+  const double kstar_lat_;
   const double iteration_time_;
   HeteroNodeSpec node_spec_;
 };
