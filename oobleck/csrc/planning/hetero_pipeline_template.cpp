@@ -102,7 +102,7 @@ get_hetero_profile_results(const std::vector<std::string> &model_names,
 HeteroPipelineTemplate
 PipelineTemplateGenerator::create_hetero_pipeline_template(
     std::vector<std::shared_ptr<LayerExecutionResults>> layer_execution_results,
-    const HeteroNodeSpec &node_spec) {
+    const HeteroNodeSpec &node_spec, const int num_mbatches) {
 #ifdef PYBIND11_MODULE
   // Release GIL
   pybind11::gil_scoped_release release;
@@ -127,6 +127,7 @@ PipelineTemplateGenerator::create_hetero_pipeline_template(
 
   std::cout << "min_num_stages: " << min_num_stages << std::endl;
   std::cout << "max_num_stages: " << max_num_stages << std::endl;
+  std::cout << "num_mbatches: " << num_mbatches << std::endl;
 
   std::vector<cppcoro::task<std::shared_ptr<DCExecutionResult>>>
       num_stages_tasks;
@@ -134,7 +135,7 @@ PipelineTemplateGenerator::create_hetero_pipeline_template(
        num_stages++) {
     num_stages_tasks.emplace_back(divide_and_conquer(
         layer_execution_results, std::make_tuple(0, layer_count), num_stages,
-        node_spec));
+        node_spec, num_mbatches));
   }
 
   std::cout << "Waiting for tasks" << std::endl;
@@ -202,7 +203,7 @@ PipelineTemplateGenerator::divide_and_conquer(
     const std::vector<std::shared_ptr<LayerExecutionResults>>
         &layer_execution_results,
     const std::tuple<int, int> layer_indices, const int num_stages,
-    const HeteroNodeSpec &node_spec) {
+    const HeteroNodeSpec &node_spec, const int num_mbatches) {
   co_await thread_pool_.schedule();
 
   int start_layer_index = std::get<0>(layer_indices);
@@ -303,7 +304,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           } else {
             result_left = co_await divide_and_conquer(
                 layer_execution_results, std::make_tuple(start_layer_index, k),
-                num_stages_left, node_spec_left);
+                num_stages_left, node_spec_left, num_mbatches);
           }
 
           auto node_spec_right = node_spec;
@@ -319,7 +320,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           } else {
             result_right = co_await divide_and_conquer(
                 layer_execution_results, std::make_tuple(k, end_layer_index),
-                num_stages - num_stages_left, node_spec_right);
+                num_stages - num_stages_left, node_spec_right, num_mbatches);
           }
 
           if (result_left == nullptr || result_right == nullptr) {
@@ -327,7 +328,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           }
 
           auto new_result =
-              std::make_shared<DCExecutionResult>(result_left, result_right);
+              std::make_shared<DCExecutionResult>(result_left, result_right, num_mbatches);
           if (result == nullptr || new_result->get_t() < result->get_t()) {
             result = new_result;
           }
@@ -358,7 +359,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           } else {
             result_left = co_await divide_and_conquer(
                 layer_execution_results, std::make_tuple(start_layer_index, k),
-                num_stages_left, node_spec_subset_left);
+                num_stages_left, node_spec_subset_left, num_mbatches);
           }
 
           auto key_right =
@@ -370,7 +371,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           } else {
             result_right = co_await divide_and_conquer(
                 layer_execution_results, std::make_tuple(k, end_layer_index),
-                num_stages - num_stages_left, node_spec_subset_right);
+                num_stages - num_stages_left, node_spec_subset_right, num_mbatches);
           }
 
           if (result_left == nullptr || result_right == nullptr) {
@@ -378,7 +379,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           }
 
           auto new_result =
-              std::make_shared<DCExecutionResult>(result_left, result_right);
+              std::make_shared<DCExecutionResult>(result_left, result_right, num_mbatches);
           if (result == nullptr || new_result->get_t() < result->get_t()) {
             result = new_result;
           }

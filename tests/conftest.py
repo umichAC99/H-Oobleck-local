@@ -187,8 +187,8 @@ class OobleckStaticClassFactory:
         return HeteroNodeSpec(
             [
                 NodeConfig("A100", 1, 2, 1.0),
-                NodeConfig("H100", 2, 2, 2.0),
-                NodeConfig("B100", 2, 2, 4.0)
+                NodeConfig("H100", 2, 2, 1.5),
+                NodeConfig("B100", 2, 2, 2.0)
             ]
         )
         
@@ -199,8 +199,8 @@ class OobleckStaticClassFactory:
         for i in range(0, len(weakest_layer_results)):
             weakest_layer_results[i] = LayerExecutionResult(
                 layer_index=weakest_layer_results[i]._index,
-                forward=weakest_layer_results[i]._forward * 10.0,
-                backward=weakest_layer_results[i]._backward * 10.0,
+                forward=weakest_layer_results[i]._forward,
+                backward=weakest_layer_results[i]._backward,
                 allreduce_in_node=weakest_layer_results[i]._allreduce_in_node,
                 allreduce_across_nodes=weakest_layer_results[i]._allreduce_across_nodes,
                 mem_required=weakest_layer_results[i]._mem_required

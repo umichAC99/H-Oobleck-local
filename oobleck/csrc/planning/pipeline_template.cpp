@@ -87,7 +87,7 @@ get_profile_results(const std::string &model_name, const std::string &model_tag,
 std::vector<PipelineTemplate>
 PipelineTemplateGenerator::create_pipeline_templates(
     std::shared_ptr<LayerExecutionResults> layer_execution_results,
-    const std::tuple<int, int> &num_nodes, const int num_gpus_per_node) {
+    const std::tuple<int, int> &num_nodes, const int num_gpus_per_node, const int num_mbatches) {
   int min_num_nodes = std::get<0>(num_nodes);
   int max_num_nodes = std::get<1>(num_nodes);
 #ifdef PYBIND11_MODULE
@@ -108,7 +108,7 @@ PipelineTemplateGenerator::create_pipeline_templates(
       num_node_tasks.emplace_back(divide_and_conquer(
           layer_execution_results,
           std::make_tuple(0, layer_execution_results->size()), num_stages, i,
-          num_gpus_per_node));
+          num_gpus_per_node, num_mbatches));
     }
     tasks[i] = std::move(num_node_tasks);
   }
@@ -197,7 +197,7 @@ cppcoro::task<std::shared_ptr<DCExecutionResult>>
 PipelineTemplateGenerator::divide_and_conquer(
     std::shared_ptr<LayerExecutionResults> layer_execution_results,
     const std::tuple<int, int> layer_indices, const int num_stages,
-    const int num_nodes, const int num_gpus_per_node) {
+    const int num_nodes, const int num_gpus_per_node, const int num_mbatches) {
   co_await thread_pool_.schedule();
 
   int start_layer_index = std::get<0>(layer_indices);
@@ -287,7 +287,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           } else {
             result_left = co_await divide_and_conquer(
                 layer_execution_results, std::make_tuple(start_layer_index, k),
-                num_stages_left, num_nodes, num_gpus_left);
+                num_stages_left, num_nodes, num_gpus_left, num_mbatches);
           }
 
           auto key_right = std::make_tuple(
@@ -302,7 +302,7 @@ PipelineTemplateGenerator::divide_and_conquer(
             result_right = co_await divide_and_conquer(
                 layer_execution_results, std::make_tuple(k, end_layer_index),
                 num_stages - num_stages_left, num_nodes,
-                num_gpus_per_node - num_gpus_left);
+                num_gpus_per_node - num_gpus_left, num_mbatches);
           }
 
           if (result_left == nullptr || result_right == nullptr) {
@@ -310,7 +310,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           }
 
           auto new_result = std::make_shared<DCExecutionResult>(
-              result_left, result_right, 20*3);
+              result_left, result_right, num_mbatches);
           if (result == nullptr || new_result->get_t() < result->get_t()) {
             result = new_result;
           }
@@ -339,7 +339,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           } else {
             result_left = co_await divide_and_conquer(
                 layer_execution_results, std::make_tuple(start_layer_index, k),
-                num_stages_left, num_nodes_left, num_gpus_per_node);
+                num_stages_left, num_nodes_left, num_gpus_per_node, num_mbatches);
           }
 
           auto key_right = std::make_tuple(
@@ -358,7 +358,7 @@ PipelineTemplateGenerator::divide_and_conquer(
             result_right = co_await divide_and_conquer(
                 layer_execution_results, std::make_tuple(k, end_layer_index),
                 num_stages - num_stages_left, num_nodes - num_nodes_left,
-                num_gpus_per_node);
+                num_gpus_per_node, num_mbatches);
           }
 
           if (result_left == nullptr || result_right == nullptr) {
@@ -366,7 +366,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           }
 
           auto new_result = std::make_shared<DCExecutionResult>(
-              result_left, result_right, 3 * 20);
+              result_left, result_right, num_mbatches);
           if (result == nullptr || new_result->get_t() < result->get_t()) {
             result = new_result;
           }

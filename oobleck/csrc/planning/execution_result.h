@@ -173,6 +173,7 @@ class DCExecutionResult {
     int num_kstar_stage_microbatch =( num_batches == 0) ?
         2 * (left->stages_.size() + right->stages_.size()) + kstar_ + 1
         : num_batches - (left->stages_.size() + right->stages_.size()) + kstar_ + 1;
+    assert(num_kstar_stage_microbatch > 0);
     double latency = 0;
     if (kstar_ == left->kstar_) {
       t2_ = num_kstar_stage_microbatch * left->get_kstar_latency();

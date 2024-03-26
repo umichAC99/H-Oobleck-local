@@ -86,9 +86,11 @@ class PipelineTemplateGenerator:
         layer_execution_results: LayerExecutionResults,
         num_nodes: tuple[int, int],
         num_gpus_per_node: int,
+        num_mbatches: int = 0,
     ) -> list[PipelineTemplate]: ...
     def create_hetero_pipeline_template(
         self,
         layer_execution_results: list[LayerExecutionResults],
         node_spec: HeteroNodeSpec,
+        num_mbatches: int = 0,
     ) -> HeteroPipelineTemplate: ...

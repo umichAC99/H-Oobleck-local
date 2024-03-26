@@ -145,13 +145,13 @@ class PipelineTemplateGenerator {
   std::vector<PipelineTemplate> create_pipeline_templates(
       std::shared_ptr<LayerExecutionResults> layer_execution_results,
       const std::tuple<int, int>& num_nodes,
-      const int num_gpus_per_node);
+      const int num_gpus_per_node, const int num_mbatches = 0);
   
   // create one hetero pipeline template based on node spec and layer execution results
   HeteroPipelineTemplate create_hetero_pipeline_template(
       std::vector<std::shared_ptr<LayerExecutionResults>>
           layer_execution_results,
-      const HeteroNodeSpec& node_spec);
+      const HeteroNodeSpec& node_spec, const int num_mbatches = 0);
 
  private:
   cppcoro::task<std::shared_ptr<DCExecutionResult>> divide_and_conquer(
@@ -159,14 +159,14 @@ class PipelineTemplateGenerator {
       const std::tuple<int, int> layer_indices,
       const int num_stages,
       const int num_nodes,
-      const int num_gpus_per_node);
+      const int num_gpus_per_node, const int num_mbatches);
 
   cppcoro::task<std::shared_ptr<DCExecutionResult>> divide_and_conquer(
       const std::vector<std::shared_ptr<LayerExecutionResults>>
           &layer_execution_results,
       const std::tuple<int, int> layer_indices,
       const int num_stages,
-      const HeteroNodeSpec& node_spec);
+      const HeteroNodeSpec& node_spec, const int num_mbatches);
 
   std::atomic<unsigned long> cache_hit_;
   std::atomic<unsigned long> cache_miss_;

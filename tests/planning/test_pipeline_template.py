@@ -12,7 +12,6 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     def profile(self) -> LayerExecutionResults:
         return self.factory.get_dummy_profile()   
     
-    @pytest.mark.skip(reason="Skipped")
     def test_node_folding(self):
         generator = PipelineTemplateGenerator()
         node_spec = self.factory.get_dummy_hetero_node_spec()
@@ -23,6 +22,7 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         pipeline_template = generator.create_hetero_pipeline_template(
             profiles,
             node_spec,
+            32,
         )
         print(pipeline_template)
         print("LOG: running node folding")
@@ -34,8 +34,11 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
             profiles[0],
             (num_nodes, num_nodes),  # num nodes range
             2,
+            32,
         )[0]
         print(pipeline_template_origin)
+        # plan = recovery(pipeline_template_origin, scaling_factors, node_spec)
+        # compare(plan, pipeline_template)
         
     
     @pytest.mark.skip(reason="Skipped")
@@ -49,12 +52,14 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         )
         print(pipeline_template)
     
+    @pytest.mark.skip(reason="Skipped")
     def test_create_pipeline_templates_onegpu(self, profile: LayerExecutionResults):
         generator = PipelineTemplateGenerator()
         pipeline_templates = generator.create_pipeline_templates(
             profile,
             (8, 8),  # num nodes range
             4,
+            60
         )
         assert len(pipeline_templates) == 1
         assert pipeline_templates[0]._num_nodes == 8
