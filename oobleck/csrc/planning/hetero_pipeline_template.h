@@ -112,9 +112,15 @@ public:
   HeteroPipelineTemplate(
       const std::vector<std::shared_ptr<StageExecutionResult>>&
                        stage_execution_results,
+      const double t1,
+      const double t2,
+      const double t3,
       const double iteration_time,
       int num_layers, const HeteroNodeSpec &node_spec)
       : stage_execution_results_(stage_execution_results),
+        t1_(t1),
+        t2_(t2),
+        t3_(t3),
         iteration_time_(iteration_time),
         node_spec_(node_spec) {
     // Run divide and conquer to create a vector of StageExecutionResult
@@ -139,6 +145,9 @@ public:
     
   }
 
+  const double get_t1() const { return t1_; }
+  const double get_t2() const { return t2_; }
+  const double get_t3() const { return t3_; }
   const double get_iteration_time() const { return iteration_time_; }
 
   const std::vector<std::shared_ptr<StageExecutionResult>> &get_stages() const {
@@ -149,6 +158,9 @@ public:
 
 private:
   std::vector<std::shared_ptr<StageExecutionResult>> stage_execution_results_;
+  const double t1_;
+  const double t2_;
+  const double t3_;
   const double iteration_time_;
   HeteroNodeSpec node_spec_;
 };

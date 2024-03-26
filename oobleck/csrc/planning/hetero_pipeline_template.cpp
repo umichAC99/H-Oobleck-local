@@ -166,7 +166,11 @@ PipelineTemplateGenerator::create_hetero_pipeline_template(
 
   assert(optimal_result != nullptr &&
            optimal_result->get_stages().size() > 0);
-  return HeteroPipelineTemplate(optimal_result->get_stages(), optimal_result->get_t(),
+  return HeteroPipelineTemplate(optimal_result->get_stages(), 
+                                optimal_result->get_t1(),
+                                optimal_result->get_t2(),
+                                optimal_result->get_t3(),
+                                optimal_result->get_t(),
                                 layer_count,
                                 node_spec);
 }

@@ -151,7 +151,11 @@ PipelineTemplateGenerator::create_pipeline_templates(
     assert(optimal_result != nullptr &&
            optimal_result->get_stages().size() > 0);
     pipeline_templates.emplace_back(
-        PipelineTemplate(optimal_result->get_stages(), optimal_result->get_t(),
+        PipelineTemplate(optimal_result->get_stages(), 
+                         optimal_result->get_t1(),
+                         optimal_result->get_t2(),
+                         optimal_result->get_t3(),
+                         optimal_result->get_t(),
                          layer_execution_results->size(), num_node_tasks.first,
                          num_gpus_per_node));
   }

@@ -194,6 +194,9 @@ class DCExecutionResult {
   }
 
   double get_t() const { return t1_ + t2_ + t3_; }
+  double get_t1() const { return t1_; }
+  double get_t2() const { return t2_; }
+  double get_t3() const { return t3_; }
   double get_kstar_latency() const {
     return stages_[kstar_]->forward_ + stages_[kstar_]->backward_;
   }
