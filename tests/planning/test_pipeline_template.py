@@ -3,6 +3,7 @@ import pytest
 from oobleck.csrc.planning.pipeline_template import (
     LayerExecutionResults,
     PipelineTemplateGenerator,
+    GreedyPipelineRecoverSolver,
 )
 from tests.conftest import OobleckSingleProcessTestCase
 
@@ -37,6 +38,8 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
             32,
         )[0]
         print(pipeline_template_origin)
+        solver = GreedyPipelineRecoverSolver(pipeline_template_origin, scaling_factors, node_spec)
+        plan = solver.solve()
         # plan = recovery(pipeline_template_origin, scaling_factors, node_spec)
         # compare(plan, pipeline_template)
         

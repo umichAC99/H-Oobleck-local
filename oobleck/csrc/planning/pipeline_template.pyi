@@ -94,3 +94,12 @@ class PipelineTemplateGenerator:
         node_spec: HeteroNodeSpec,
         num_mbatches: int = 0,
     ) -> HeteroPipelineTemplate: ...
+    
+class GreedyPipelineRecoverSolver
+    def __init__(
+        self,
+        pipeline_template: PipelineTemplate,
+        scaling_factor: list[float],
+        node_spec: HeteroNodeSpec,
+    ): ...
+    def solve(self) -> HeteroPipelineTemplate: ...

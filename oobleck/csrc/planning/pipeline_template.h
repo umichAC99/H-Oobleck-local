@@ -26,6 +26,7 @@ class PipelineTemplate {
                    const double t3,
                    const double kstar_lat,
                    const double iteration_time,
+                   const int num_mbatches,
                    const int num_layers,
                    const int num_nodes,
                    const int num_gpus_per_node)
@@ -34,6 +35,8 @@ class PipelineTemplate {
         t2_(t2),
         t3_(t3),
         kstar_lat_(kstar_lat),
+        num_mbatches_(num_mbatches),
+        num_layers_(num_layers),
         iteration_time_(iteration_time),
         num_nodes_(num_nodes),
         num_gpus_per_node_(num_gpus_per_node) {
@@ -62,6 +65,7 @@ class PipelineTemplate {
       repr += "t2: " + std::to_string(get_t2()) + ", ";
       repr += "t3: " + std::to_string(get_t3()) + ", ";
       repr += "kstar_latency: " + std::to_string(get_kstar_latency()) + ", ";
+      repr += "num_mbatches: " + std::to_string(get_num_mbatches()) + ", ";
       repr += "stages: [";
       for (const auto &stage : get_stages()) {
         repr += stage->to_string() + ", ";
@@ -78,6 +82,8 @@ class PipelineTemplate {
   const double get_t3() const { return t3_; }
   const double get_kstar_latency() const { return kstar_lat_; }
   const double get_iteration_time() const { return iteration_time_; }
+  const int get_num_layers() const { return num_layers_; }
+  const int get_num_mbatches() const { return num_mbatches_; }
   const std::vector<std::shared_ptr<StageExecutionResult>>& get_stages() const {
     return stage_execution_results_;
   }
@@ -120,6 +126,8 @@ class PipelineTemplate {
   const double t3_;
   const double kstar_lat_;
   const double iteration_time_;
+  const int num_mbatches_;
+  const int num_layers_;
   const int num_nodes_;
   const int num_gpus_per_node_;
 };

@@ -119,6 +119,7 @@ public:
       const double t3,
       const double kstar_lat,
       const double iteration_time,
+      const int num_mbatches,
       int num_layers, const HeteroNodeSpec &node_spec)
       : stage_execution_results_(stage_execution_results),
         t1_(t1),
@@ -126,6 +127,7 @@ public:
         t3_(t3),
         kstar_lat_(kstar_lat),
         iteration_time_(iteration_time),
+        num_mbatches_(num_mbatches),
         node_spec_(node_spec) {
     // Run divide and conquer to create a vector of StageExecutionResult
     // Perform assertion
@@ -154,6 +156,7 @@ public:
   const double get_t3() const { return t3_; }
   const double get_kstar_latency() const { return kstar_lat_; }
   const double get_iteration_time() const { return iteration_time_; }
+  const int get_num_mbatches() const { return num_mbatches_; }
   std::string to_string() const{
     std::string repr = "<oobleck.HeteroPipelineTemplate.[";
     repr += "t: " + std::to_string(get_iteration_time()) + ", ";
@@ -161,6 +164,7 @@ public:
     repr += "t2: " + std::to_string(get_t2()) + ", ";
     repr += "t3: " + std::to_string(get_t3()) + ", ";
     repr += "kstar_latency: " + std::to_string(get_kstar_latency()) + ", ";
+    repr += "num_mbatches: " + std::to_string(get_num_mbatches()) + ", ";
     repr += "stages: [";
     for (const auto &stage : get_stages()) {
       repr += stage->to_string() + ", ";
@@ -186,6 +190,7 @@ private:
   const double t3_;
   const double kstar_lat_;
   const double iteration_time_;
+  const int num_mbatches_;
   HeteroNodeSpec node_spec_;
 };
 
