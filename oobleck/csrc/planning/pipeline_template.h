@@ -3,6 +3,7 @@
 
 #include "execution_result.h"
 #include "hetero_pipeline_template.h"
+#include "oobleck_utils.h"
 #include <atomic>
 #include <cppcoro/static_thread_pool.hpp>
 #include <cppcoro/sync_wait.hpp>
@@ -139,6 +140,18 @@ public:
   cppcoro::static_thread_pool thread_pool_ = cppcoro::static_thread_pool(1);
 
   const CacheMap *get_dc_cache() const { return &dc_cache_; }
+
+  void print_dc_cache() const{
+    PRINT("DC CACHE:");
+    for (const auto &entry : dc_cache_) {
+      std::string string_key = std::to_string(std::get<0>(entry.first)) + "[" +
+                               std::to_string(std::get<1>(entry.first)) + "-" +
+                               std::to_string(std::get<2>(entry.first)) + "]" +
+                               std::get<3>(entry.first);
+      if (entry.second != nullptr)
+        PRINT("key: " + string_key + " -> " + "value: " + entry.second->to_string());
+    }
+  }
 
   std::vector<PipelineTemplate> create_pipeline_templates(
       std::shared_ptr<LayerExecutionResults> layer_execution_results,

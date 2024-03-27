@@ -1,4 +1,5 @@
 #include "pipeline_recovery.h"
+#include <cmath>
 namespace oobleck {
 
 /*
@@ -18,8 +19,8 @@ namespace oobleck {
 
     @assumption:
         scaling_factors_, hetero_node_spec_ and layer_execution_results_ are
-   sorted based on scaling_factors_ in descending order (first one is the
-   strongest node)
+   sorted based on scaling_factors_ in ascending order (first one is the
+   weakest node)
 
     @pseduocode:
         for i : 1...len(node_spec):
@@ -44,16 +45,91 @@ namespace oobleck {
 
 */
 
+static DCExecutionResult::key get_dc_key(int num_stages, int start_layer_idx,
+                                          int end_layer_idx,
+                                          HeteroNodeSpec& spec) {
+    bool is_homo = spec.num_total_nodes == spec.node_specs[0].num_nodes;
+    std::string device_key;
+    if (is_homo){
+        device_key =  DCExecutionResult::get_device_indices_key(
+                          spec.node_specs[0].num_nodes, spec.node_specs[0].num_gpus, 0);
+    }   else{
+        device_key = spec.get_cache_key();
+    }
+    return std::make_tuple(num_stages, start_layer_idx, end_layer_idx, device_key);
+}
+
+// try to assign node idx i with assigned_device to stage, update left and right spec
+static void update_node_spec(std::shared_ptr<StageExecutionResult> stage, int node_idx, int assigned_device, HeteroNodeSpec& left_spec, HeteroNodeSpec& right_spec){
+    assert(stage->node_type_idx_ == 0 && "Trying to assign a stage that has been assigned");
+}
+
 std::shared_ptr<oobleck::DCExecutionResult>
 BasePipelineRecoverSolver::try_assign(
     int idx, int assigned_device,
-    const std::shared_ptr<LayerExecutionResults> &profile) const {
+    const std::shared_ptr<LayerExecutionResults> &profile, HeteroNodeSpec& spec,
+    std::vector<std::shared_ptr<StageExecutionResult>> & stages) const {
+
+    // find DCExecutionResult from 0...idx-1
+    
+
+    // find DCExecutionResult from idx+1...end
   return nullptr;
 }
 
 HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve() const {
 
   assert(dc_cache_ != nullptr && "DC Cache is not set");
+
+  auto curr_stages = pipeline_template_.get_stages();
+  HeteroNodeSpec curr_spec, left_spec, right_spec;
+
+  // initialize curr_spec to be homogenous cluster
+  curr_spec.node_specs = hetero_node_spec_.node_specs;
+  for (int i = 0; i < curr_spec.node_specs.size(); i++) {
+    if (i == 0){
+        curr_spec.node_specs[i].num_nodes = pipeline_template_.get_num_nodes();
+        curr_spec.node_specs[i].num_gpus = pipeline_template_.get_num_gpus_per_node();
+    }   else {
+        curr_spec.node_specs[i].num_nodes = 0;
+        curr_spec.node_specs[i].num_gpus = 0;
+    }
+  }
+  curr_spec.update_fields();
+  left_spec = curr_spec;
+  right_spec = curr_spec;
+  PRINT("Curr Spec: " + curr_spec.to_string());
+
+  assert(false && "Not implemented");
+  // start greedy algorithm
+  for (int i = hetero_node_spec_.node_specs.size()-1; i >= 0; i++) {
+    int used_device = 0;
+    int total_device = hetero_node_spec_.node_specs[i].num_nodes *
+                       hetero_node_spec_.node_specs[i].num_gpus;
+    while (used_device < total_device) {
+      double min_time = std::numeric_limits<double>::max();
+      int min_idx = -1;
+      int assigned_device = -1;
+      for (int j = 0; j < curr_stages.size(); j++) {
+        double assigned_device_f = curr_stages[j]->num_gpus_ / scaling_factors_[i];
+        if (assigned_device_f < 0.5)
+          continue;
+        else if (assigned_device_f + used_device > total_device)
+          assigned_device_f = total_device - used_device;
+        else
+          assigned_device = ceil(assigned_device_f);
+
+        auto dc_result = try_assign(j, assigned_device, layer_execution_results_[i], curr_spec, curr_stages);
+        if (dc_result->get_t() < min_time) {
+          min_time = dc_result->get_t();
+          min_idx = j;
+        }
+      }
+      assert(assigned_device > 0 && "Assigned device is not set");
+      // assign(min_idx, assigned_device, profile);
+      used_device += assigned_device;
+    }
+  }
 
   return HeteroPipelineTemplate(
       pipeline_template_.get_stages(), pipeline_template_.get_t1(),

@@ -63,13 +63,16 @@ struct NodeConfig {
 
 struct HeteroNodeSpec {
   std::vector<NodeConfig> node_specs;
-  int num_total_nodes;
-  int idx_to_only_node; // index to the node that has only one node; other nodes
+  float num_total_nodes_f;
+  int num_total_nodes = 0;
+  int idx_to_only_node = -1; // index to the node that has only one node; other nodes
                         // are 0.
-  HeteroNodeSpec(std::vector<NodeConfig> node_specs)
+  HeteroNodeSpec(const std::vector<NodeConfig>& node_specs)
       : node_specs(node_specs), num_total_nodes(0) {
     update_fields();
   }
+   HeteroNodeSpec(const std::vector<NodeConfig>& node_specs, int num_total_nodes)
+      : node_specs(node_specs), num_total_nodes(num_total_nodes){}
   HeteroNodeSpec() : num_total_nodes(0), idx_to_only_node(-1) {}
 
   // update num_total_nodes and idx_to_only_node when node_specs is updated
@@ -91,13 +94,19 @@ struct HeteroNodeSpec {
   }
 
   // subtract another HeteroNodeSpec(a subset) from this
-  HeteroNodeSpec subtract(const HeteroNodeSpec &other) const {
+  HeteroNodeSpec subtract(const HeteroNodeSpec &other, bool need_update = true) const {
     std::vector<NodeConfig> new_node_specs = node_specs;
+    int total_nodes = num_total_nodes;
     for (int i = 0; i < node_specs.size(); i++) {
       new_node_specs[i].num_nodes -= other.node_specs[i].num_nodes;
-      assert(new_node_specs[i].num_nodes >= 0);
+      total_nodes -= other.node_specs[i].num_nodes;
+      assert(new_node_specs[i].num_nodes >= 0 && total_nodes >= 0);
     }
-    return HeteroNodeSpec(new_node_specs);
+    if (need_update){
+      return HeteroNodeSpec(new_node_specs);
+    }  else {
+      return HeteroNodeSpec(new_node_specs, total_nodes);
+    }
   }
 
   std::string to_string() const {

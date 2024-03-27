@@ -16,7 +16,8 @@ protected:
 
   std::shared_ptr<oobleck::DCExecutionResult>
   try_assign(int idx, int assigned_device,
-             const std::shared_ptr<LayerExecutionResults> &profile) const;
+             const std::shared_ptr<LayerExecutionResults> &profile, HeteroNodeSpec& spec,
+            std::vector<std::shared_ptr<StageExecutionResult>> & stages) const;
 
 public:
   BasePipelineRecoverSolver(

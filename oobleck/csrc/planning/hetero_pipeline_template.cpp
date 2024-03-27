@@ -171,6 +171,8 @@ PipelineTemplateGenerator::create_hetero_pipeline_template(
   }
 #endif
 
+  // print_dc_cache();
+
   assert(optimal_result != nullptr && optimal_result->get_stages().size() > 0);
   return HeteroPipelineTemplate(
       optimal_result->get_stages(), optimal_result->get_t1(),

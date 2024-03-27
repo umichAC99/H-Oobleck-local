@@ -209,6 +209,25 @@ public:
     return stages_;
   }
 
+  std::string to_string() const {
+    std::string repr = "<oobleck.DCExecutionResult.[";
+    repr += "t: " + std::to_string(get_t()) + ", ";
+    repr += "t1: " + std::to_string(get_t1()) + ", ";
+    repr += "t2: " + std::to_string(get_t2()) + ", ";
+    repr += "t3: " + std::to_string(get_t3()) + ", ";
+    repr += "kstar_latency: " + std::to_string(get_kstar_latency()) + ", ";
+    repr += "stages: [";
+    for (const auto &stage : get_stages()) {
+      repr += stage->to_string() + ", ";
+    }
+    repr.pop_back();
+    repr.pop_back();
+    repr += "], ";
+    repr += "node_type_indices: " + node_type_indices_;
+    repr += "]>";
+    return repr;
+  }
+
 private:
   int kstar_;
   double t1_, t2_, t3_;
