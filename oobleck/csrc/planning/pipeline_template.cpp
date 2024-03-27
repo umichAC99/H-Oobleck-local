@@ -87,7 +87,8 @@ get_profile_results(const std::string &model_name, const std::string &model_tag,
 std::vector<PipelineTemplate>
 PipelineTemplateGenerator::create_pipeline_templates(
     std::shared_ptr<LayerExecutionResults> layer_execution_results,
-    const std::tuple<int, int> &num_nodes, const int num_gpus_per_node, const int num_mbatches) {
+    const std::tuple<int, int> &num_nodes, const int num_gpus_per_node,
+    const int num_mbatches) {
   int min_num_nodes = std::get<0>(num_nodes);
   int max_num_nodes = std::get<1>(num_nodes);
 #ifdef PYBIND11_MODULE
@@ -150,38 +151,33 @@ PipelineTemplateGenerator::create_pipeline_templates(
 
     assert(optimal_result != nullptr &&
            optimal_result->get_stages().size() > 0);
-    
-    #ifdef DEBUG_PIPELINE_TEMPLATE
-     std::shared_ptr<DCExecutionResult> result(nullptr);
-     std::cout << "DEBUG HOMO PIPELINE TEMPLATE: " << std::endl;
+
+#ifdef DEBUG_PIPELINE_TEMPLATE
+    std::shared_ptr<DCExecutionResult> result(nullptr);
+    std::cout << "DEBUG HOMO PIPELINE TEMPLATE: " << std::endl;
     for (int i = 0; i < results.size(); i++) {
-        std::cout << "Result " << i << std::endl;
-        result = results[i];
-        if (result == nullptr) {
-          std::cout << "Result is null" << std::endl;
-          continue;
-        }
-        std::cout <<  PipelineTemplate(result->get_stages(), 
-                         result->get_t1(),
-                         result->get_t2(),
-                         result->get_t3(),
-                         result->get_kstar_latency(),
-                         result->get_t(),
-                         num_mbatches,
-                         layer_execution_results->size(), num_node_tasks.first,
-                         num_gpus_per_node).to_string() << std::endl;
+      std::cout << "Result " << i << std::endl;
+      result = results[i];
+      if (result == nullptr) {
+        std::cout << "Result is null" << std::endl;
+        continue;
+      }
+      std::cout << PipelineTemplate(result->get_stages(), result->get_t1(),
+                                    result->get_t2(), result->get_t3(),
+                                    result->get_kstar_latency(),
+                                    result->get_t(), num_mbatches,
+                                    layer_execution_results->size(),
+                                    num_node_tasks.first, num_gpus_per_node)
+                       .to_string()
+                << std::endl;
     }
-    #endif
-    pipeline_templates.emplace_back(
-        PipelineTemplate(optimal_result->get_stages(), 
-                         optimal_result->get_t1(),
-                         optimal_result->get_t2(),
-                         optimal_result->get_t3(),
-                         optimal_result->get_kstar_latency(),
-                         optimal_result->get_t(),
-                         num_mbatches,
-                         layer_execution_results->size(), num_node_tasks.first,
-                         num_gpus_per_node));
+#endif
+    pipeline_templates.emplace_back(PipelineTemplate(
+        optimal_result->get_stages(), optimal_result->get_t1(),
+        optimal_result->get_t2(), optimal_result->get_t3(),
+        optimal_result->get_kstar_latency(), optimal_result->get_t(),
+        num_mbatches, layer_execution_results->size(), num_node_tasks.first,
+        num_gpus_per_node));
   }
 
 #ifdef PYBIND11_MODULE
@@ -288,8 +284,8 @@ PipelineTemplateGenerator::divide_and_conquer(
     //         result_left = it->second;
     //       } else {
     //         result_left = co_await divide_and_conquer(
-    //             layer_execution_results, std::make_tuple(start_layer_index, k),
-    //             num_stages_left, num_nodes, num_gpus_left, num_mbatches);
+    //             layer_execution_results, std::make_tuple(start_layer_index,
+    //             k), num_stages_left, num_nodes, num_gpus_left, num_mbatches);
     //       }
 
     //       auto key_right = std::make_tuple(
@@ -319,60 +315,63 @@ PipelineTemplateGenerator::divide_and_conquer(
     //     }
     //   }
     // } else {
-      // Split nodes
-      for (int num_nodes_left :
-           std::ranges::iota_view<int, int>(1, num_nodes)) {
-        for (int num_stages_left :
-             std::ranges::iota_view<int, int>(1, num_stages)) {
-          std::shared_ptr<DCExecutionResult> result_left(nullptr);
-          std::shared_ptr<DCExecutionResult> result_right(nullptr);
+    // Split nodes
+    for (int num_nodes_left : std::ranges::iota_view<int, int>(1, num_nodes)) {
+      for (int num_stages_left :
+           std::ranges::iota_view<int, int>(1, num_stages)) {
+        std::shared_ptr<DCExecutionResult> result_left(nullptr);
+        std::shared_ptr<DCExecutionResult> result_right(nullptr);
 
-          auto key_left =
-              std::make_tuple(num_stages_left, start_layer_index, k,
-                              DCExecutionResult::get_device_indices_key(
-                                  num_nodes_left, num_gpus_per_node, 0));
-          
-          auto it = dc_cache_.find(key_left);
-          if (it != dc_cache_.end()) {
-            // std::cout << "found left" << std::endl;
-            // std::cout << "key left: " << std::get<0>(key_left) << " " << std::get<1>(key_left) << " "
-            // << std::get<2>(key_left) << " " << std::get<3>(key_left) << std::endl;
-            result_left = it->second;
-          } else {
-            result_left = co_await divide_and_conquer(
-                layer_execution_results, std::make_tuple(start_layer_index, k),
-                num_stages_left, num_nodes_left, num_gpus_per_node, num_mbatches);
-          }
+        auto key_left =
+            std::make_tuple(num_stages_left, start_layer_index, k,
+                            DCExecutionResult::get_device_indices_key(
+                                num_nodes_left, num_gpus_per_node, 0));
 
-          auto key_right = std::make_tuple(
-              num_stages - num_stages_left, k, end_layer_index,
-              DCExecutionResult::get_device_indices_key(
-                  num_nodes - num_nodes_left, num_gpus_per_node, 0));
-
-          it = dc_cache_.find(key_right);
-          if (it != dc_cache_.end()) {
-            result_right = it->second;
-            // std::cout << "found right" << std::endl;
-            // std::cout << "key right: " << std::get<0>(key_right) << " " << std::get<1>(key_right) << " "
-            // << std::get<2>(key_right) << " " << std::get<3>(key_right) << std::endl;
-
-          } else {
-            result_right = co_await divide_and_conquer(
-                layer_execution_results, std::make_tuple(k, end_layer_index),
-                num_stages - num_stages_left, num_nodes - num_nodes_left,
-                num_gpus_per_node, num_mbatches);
-          }
-
-          if (result_left == nullptr || result_right == nullptr) {
-            continue;
-          }
-
-          auto new_result = std::make_shared<DCExecutionResult>(
-              result_left, result_right, num_mbatches);
-          if (result == nullptr || new_result->get_t() < result->get_t()) {
-            result = new_result;
-          }
+        auto it = dc_cache_.find(key_left);
+        if (it != dc_cache_.end()) {
+          // std::cout << "found left" << std::endl;
+          // std::cout << "key left: " << std::get<0>(key_left) << " " <<
+          // std::get<1>(key_left) << " "
+          // << std::get<2>(key_left) << " " << std::get<3>(key_left) <<
+          // std::endl;
+          result_left = it->second;
+        } else {
+          result_left = co_await divide_and_conquer(
+              layer_execution_results, std::make_tuple(start_layer_index, k),
+              num_stages_left, num_nodes_left, num_gpus_per_node, num_mbatches);
         }
+
+        auto key_right = std::make_tuple(
+            num_stages - num_stages_left, k, end_layer_index,
+            DCExecutionResult::get_device_indices_key(
+                num_nodes - num_nodes_left, num_gpus_per_node, 0));
+
+        it = dc_cache_.find(key_right);
+        if (it != dc_cache_.end()) {
+          result_right = it->second;
+          // std::cout << "found right" << std::endl;
+          // std::cout << "key right: " << std::get<0>(key_right) << " " <<
+          // std::get<1>(key_right) << " "
+          // << std::get<2>(key_right) << " " << std::get<3>(key_right) <<
+          // std::endl;
+
+        } else {
+          result_right = co_await divide_and_conquer(
+              layer_execution_results, std::make_tuple(k, end_layer_index),
+              num_stages - num_stages_left, num_nodes - num_nodes_left,
+              num_gpus_per_node, num_mbatches);
+        }
+
+        if (result_left == nullptr || result_right == nullptr) {
+          continue;
+        }
+
+        auto new_result = std::make_shared<DCExecutionResult>(
+            result_left, result_right, num_mbatches);
+        if (result == nullptr || new_result->get_t() < result->get_t()) {
+          result = new_result;
+        }
+      }
       // }
     }
   }

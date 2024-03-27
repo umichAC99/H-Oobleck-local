@@ -1,3 +1,4 @@
+#include "oobleck_utils.h"
 #include "pipeline_template.h"
 #include <algorithm>
 #include <cassert>
@@ -5,13 +6,12 @@
 #include <cppcoro/when_all.hpp>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <ranges>
 #include <string>
-#include <map>
-#include "oobleck_utils.h"
 
 #ifdef PYBIND11_MODULE
 #include <pybind11/pybind11.h>
@@ -60,7 +60,6 @@ void generateSubsetsUtil(const HeteroNodeSpec &originalSpec,
     }
   }
 }
-
 
 // enumerate all possible subsets of the original cluster set
 std::vector<HeteroNodeSpec> generateSubsets(const HeteroNodeSpec &heteroSpec) {
@@ -134,57 +133,50 @@ PipelineTemplateGenerator::create_hetero_pipeline_template(
             << ", miss: " << cache_miss_.load() << std::endl;
 
   if (std::all_of(results.begin(), results.end(),
-                  [](const std::shared_ptr<DCExecutionResult> &result)
-                      -> bool { return result == nullptr; })) {
+                  [](const std::shared_ptr<DCExecutionResult> &result) -> bool {
+                    return result == nullptr;
+                  })) {
     std::cout << "All results are invalid" << std::endl;
   }
 
   auto optimal_result = [&]() -> std::shared_ptr<DCExecutionResult> {
-      std::shared_ptr<DCExecutionResult> result(nullptr);
-      for (int i = 0; i < results.size(); i++) {
-        if (result == nullptr) {
-          result = results[i];
-        } else if (results[i] != nullptr &&
-                   results[i]->get_t() < result->get_t()) {
-          result = results[i];
-        }
-      }
-      return result;
-    }();
-
-  #ifdef DEBUG_PIPELINE_TEMPLATE
-     std::shared_ptr<DCExecutionResult> result(nullptr);
-     std::cout << "DEBUG HETERO PIPELINE TEMPLATE: " << std::endl;
+    std::shared_ptr<DCExecutionResult> result(nullptr);
     for (int i = 0; i < results.size(); i++) {
-        std::cout << "Result " << i << std::endl;
+      if (result == nullptr) {
         result = results[i];
-        if (result == nullptr) {
-          std::cout << "Result is null" << std::endl;
-          continue;
-        }
-        std::cout <<  HeteroPipelineTemplate(result->get_stages(), 
-                         result->get_t1(),
-                         result->get_t2(),
-                         result->get_t3(),
-                         result->get_kstar_latency(),
-                         result->get_t(),
-                          num_mbatches,
-                         layer_count,
-                                node_spec).to_string() << std::endl;
+      } else if (results[i] != nullptr &&
+                 results[i]->get_t() < result->get_t()) {
+        result = results[i];
+      }
     }
-    #endif
+    return result;
+  }();
 
-  assert(optimal_result != nullptr &&
-           optimal_result->get_stages().size() > 0);
-  return HeteroPipelineTemplate(optimal_result->get_stages(), 
-                                optimal_result->get_t1(),
-                                optimal_result->get_t2(),
-                                optimal_result->get_t3(),
-                                optimal_result->get_kstar_latency(),
-                                optimal_result->get_t(),
-                                num_mbatches,
-                                layer_count,
-                                node_spec);
+#ifdef DEBUG_PIPELINE_TEMPLATE
+  std::shared_ptr<DCExecutionResult> result(nullptr);
+  std::cout << "DEBUG HETERO PIPELINE TEMPLATE: " << std::endl;
+  for (int i = 0; i < results.size(); i++) {
+    std::cout << "Result " << i << std::endl;
+    result = results[i];
+    if (result == nullptr) {
+      std::cout << "Result is null" << std::endl;
+      continue;
+    }
+    std::cout << HeteroPipelineTemplate(
+                     result->get_stages(), result->get_t1(), result->get_t2(),
+                     result->get_t3(), result->get_kstar_latency(),
+                     result->get_t(), num_mbatches, layer_count, node_spec)
+                     .to_string()
+              << std::endl;
+  }
+#endif
+
+  assert(optimal_result != nullptr && optimal_result->get_stages().size() > 0);
+  return HeteroPipelineTemplate(
+      optimal_result->get_stages(), optimal_result->get_t1(),
+      optimal_result->get_t2(), optimal_result->get_t3(),
+      optimal_result->get_kstar_latency(), optimal_result->get_t(),
+      num_mbatches, layer_count, node_spec);
 }
 
 cppcoro::task<std::shared_ptr<DCExecutionResult>>
@@ -270,7 +262,8 @@ PipelineTemplateGenerator::divide_and_conquer(
     //   // Split GPUs in a node
     //   assert(num_gpus != -1);
     //   assert(node_spec.idx_to_only_node != -1);
-    //   for (int num_gpus_left : std::ranges::iota_view<int, int>(1, num_gpus)) {
+    //   for (int num_gpus_left : std::ranges::iota_view<int, int>(1, num_gpus))
+    //   {
     //     // TODO: understand why
     //     if (num_gpus_left != num_gpus - num_gpus_left) {
     //       continue;
@@ -284,7 +277,8 @@ PipelineTemplateGenerator::divide_and_conquer(
     //       auto node_spec_left = node_spec;
     //       node_spec_left.node_specs[node_spec.idx_to_only_node].num_gpus =
     //           num_gpus_left;
-    //       auto key_left = std::make_tuple(num_stages_left, start_layer_index, k,
+    //       auto key_left = std::make_tuple(num_stages_left, start_layer_index,
+    //       k,
     //                                       node_spec_left.get_cache_key());
 
     //       auto it = dc_cache_.find(key_left);
@@ -292,15 +286,16 @@ PipelineTemplateGenerator::divide_and_conquer(
     //         result_left = it->second;
     //       } else {
     //         result_left = co_await divide_and_conquer(
-    //             layer_execution_results, std::make_tuple(start_layer_index, k),
-    //             num_stages_left, node_spec_left, num_mbatches);
+    //             layer_execution_results, std::make_tuple(start_layer_index,
+    //             k), num_stages_left, node_spec_left, num_mbatches);
     //       }
 
     //       auto node_spec_right = node_spec;
     //       node_spec_right.node_specs[node_spec.idx_to_only_node].num_gpus =
     //           num_gpus - num_gpus_left;
     //       auto key_right =
-    //           std::make_tuple(num_stages - num_stages_left, k, end_layer_index,
+    //           std::make_tuple(num_stages - num_stages_left, k,
+    //           end_layer_index,
     //                           node_spec_right.get_cache_key());
 
     //       it = dc_cache_.find(key_right);
@@ -317,7 +312,8 @@ PipelineTemplateGenerator::divide_and_conquer(
     //       }
 
     //       auto new_result =
-    //           std::make_shared<DCExecutionResult>(result_left, result_right, num_mbatches);
+    //           std::make_shared<DCExecutionResult>(result_left, result_right,
+    //           num_mbatches);
     //       if (result == nullptr || new_result->get_t() < result->get_t()) {
     //         result = new_result;
     //       }
@@ -325,57 +321,57 @@ PipelineTemplateGenerator::divide_and_conquer(
     //   } // for num_gpus_left
     // }   // if num_nodes == 1
     // else {
-      // Split nodes
-      std::vector<HeteroNodeSpec> all_node_spec_subsets =
-          generateSubsets(node_spec);
-      for (auto &node_spec_subset_left : all_node_spec_subsets) {
-        auto node_spec_subset_right = node_spec.subtract(node_spec_subset_left);
-        // std::cout << "origin " << node_spec.to_string() << std::endl;
-        // std::cout << "left " << node_spec_subset_left.to_string() << std::endl;
-        // std::cout << "right " << node_spec_subset_right.to_string()
-                  // << std::endl;
-        for (int num_stages_left :
-             std::ranges::iota_view<int, int>(1, num_stages)) {
+    // Split nodes
+    std::vector<HeteroNodeSpec> all_node_spec_subsets =
+        generateSubsets(node_spec);
+    for (auto &node_spec_subset_left : all_node_spec_subsets) {
+      auto node_spec_subset_right = node_spec.subtract(node_spec_subset_left);
+      // std::cout << "origin " << node_spec.to_string() << std::endl;
+      // std::cout << "left " << node_spec_subset_left.to_string() << std::endl;
+      // std::cout << "right " << node_spec_subset_right.to_string()
+      // << std::endl;
+      for (int num_stages_left :
+           std::ranges::iota_view<int, int>(1, num_stages)) {
 
-          std::shared_ptr<DCExecutionResult> result_left(nullptr);
-          std::shared_ptr<DCExecutionResult> result_right(nullptr);
-          auto key_left =
-              std::make_tuple(num_stages_left, start_layer_index, k,
-                              node_spec_subset_left.get_cache_key());
-          auto it = dc_cache_.find(key_left);
-          if (it != dc_cache_.end()) {
-            result_left = it->second;
-          } else {
-            result_left = co_await divide_and_conquer(
-                layer_execution_results, std::make_tuple(start_layer_index, k),
-                num_stages_left, node_spec_subset_left, num_mbatches);
-          }
+        std::shared_ptr<DCExecutionResult> result_left(nullptr);
+        std::shared_ptr<DCExecutionResult> result_right(nullptr);
+        auto key_left = std::make_tuple(num_stages_left, start_layer_index, k,
+                                        node_spec_subset_left.get_cache_key());
+        auto it = dc_cache_.find(key_left);
+        if (it != dc_cache_.end()) {
+          result_left = it->second;
+        } else {
+          result_left = co_await divide_and_conquer(
+              layer_execution_results, std::make_tuple(start_layer_index, k),
+              num_stages_left, node_spec_subset_left, num_mbatches);
+        }
 
-          auto key_right =
-              std::make_tuple(num_stages - num_stages_left, k, end_layer_index,
-                              node_spec_subset_right.get_cache_key());
-          it = dc_cache_.find(key_right);
-          if (it != dc_cache_.end()) {
-            result_right = it->second;
-          } else {
-            result_right = co_await divide_and_conquer(
-                layer_execution_results, std::make_tuple(k, end_layer_index),
-                num_stages - num_stages_left, node_spec_subset_right, num_mbatches);
-          }
+        auto key_right =
+            std::make_tuple(num_stages - num_stages_left, k, end_layer_index,
+                            node_spec_subset_right.get_cache_key());
+        it = dc_cache_.find(key_right);
+        if (it != dc_cache_.end()) {
+          result_right = it->second;
+        } else {
+          result_right = co_await divide_and_conquer(
+              layer_execution_results, std::make_tuple(k, end_layer_index),
+              num_stages - num_stages_left, node_spec_subset_right,
+              num_mbatches);
+        }
 
-          if (result_left == nullptr || result_right == nullptr) {
-            continue;
-          }
+        if (result_left == nullptr || result_right == nullptr) {
+          continue;
+        }
 
-          auto new_result =
-              std::make_shared<DCExecutionResult>(result_left, result_right, num_mbatches);
-          if (result == nullptr || new_result->get_t() < result->get_t()) {
-            result = new_result;
-          }
-        } // for stages
-      }   // for node_spec_subset
+        auto new_result = std::make_shared<DCExecutionResult>(
+            result_left, result_right, num_mbatches);
+        if (result == nullptr || new_result->get_t() < result->get_t()) {
+          result = new_result;
+        }
+      } // for stages
+    }   // for node_spec_subset
     // }     // if num_nodes != 1
-  }       // divide for loop
+  } // divide for loop
 
   dc_cache_.insert({key, result});
   co_return result;

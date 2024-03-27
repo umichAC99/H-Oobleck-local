@@ -3,7 +3,8 @@ namespace oobleck {
 
 /*
     @brief:
-        A greedy algorithm to recover(assign) heterogenous nodes to a homogenous pipeline template
+        A greedy algorithm to recover(assign) heterogenous nodes to a homogenous
+   pipeline template
     @args:
         const PipelineTemplate& pipeline_template_;
         const std::vector<float>& scaling_factors_;
@@ -16,8 +17,9 @@ namespace oobleck {
         HeteroPipelineTemplate
 
     @assumption:
-        scaling_factors_, hetero_node_spec_ and layer_execution_results_ are sorted based
-        on scaling_factors_ in descending order (first one is the strongest node)
+        scaling_factors_, hetero_node_spec_ and layer_execution_results_ are
+   sorted based on scaling_factors_ in descending order (first one is the
+   strongest node)
 
     @pseduocode:
         for i : 1...len(node_spec):
@@ -31,7 +33,7 @@ namespace oobleck {
                     assigned_device = stages[j].device / scaling_factors_[i]
                     if assigned_device < 0.5
                         continue
-                    else 
+                    else
                         assigned_device = ceil(assigned_device)
                     min_time = try_assign(j, assigned_device, profile)
                     if min_time < min_time:
@@ -42,22 +44,23 @@ namespace oobleck {
 
 */
 
-HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve() const{
-
-    assert(dc_cache_ != nullptr && "DC Cache is not set");
-
-
-
-    return HeteroPipelineTemplate(
-        pipeline_template_.get_stages(),
-        pipeline_template_.get_t1(),
-        pipeline_template_.get_t2(),
-        pipeline_template_.get_t3(),
-        pipeline_template_.get_kstar_latency(),
-        pipeline_template_.get_iteration_time(),
-        pipeline_template_.get_num_mbatches(),
-        pipeline_template_.get_num_layers(),
-        hetero_node_spec_
-    );
+std::shared_ptr<oobleck::DCExecutionResult>
+BasePipelineRecoverSolver::try_assign(
+    int idx, int assigned_device,
+    const std::shared_ptr<LayerExecutionResults> &profile) const {
+  return nullptr;
 }
+
+HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve() const {
+
+  assert(dc_cache_ != nullptr && "DC Cache is not set");
+
+  return HeteroPipelineTemplate(
+      pipeline_template_.get_stages(), pipeline_template_.get_t1(),
+      pipeline_template_.get_t2(), pipeline_template_.get_t3(),
+      pipeline_template_.get_kstar_latency(),
+      pipeline_template_.get_iteration_time(),
+      pipeline_template_.get_num_mbatches(),
+      pipeline_template_.get_num_layers(), hetero_node_spec_);
 }
+} // namespace oobleck

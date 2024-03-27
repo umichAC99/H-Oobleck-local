@@ -1,6 +1,6 @@
 #include "execution_result.h"
-#include "pipeline_template.h"
 #include "pipeline_recovery.h"
+#include "pipeline_template.h"
 #include <map>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -74,8 +74,7 @@ PYBIND11_MODULE(pipeline_template, m) {
   py::class_<PipelineTemplate>(m, "PipelineTemplate")
       .def(py::init<const std::vector<std::shared_ptr<StageExecutionResult>> &,
                     const double, const double, const double, const double,
-                    const double, const int,
-                    const int, const int, const int>())
+                    const double, const int, const int, const int, const int>())
       .def("get_stages", &PipelineTemplate::get_stages)
       .def("get_rank_grid", &PipelineTemplate::get_rank_grid, py::arg("ranks"))
       .def_property_readonly("_iteration_time",
@@ -88,9 +87,8 @@ PYBIND11_MODULE(pipeline_template, m) {
       .def_property_readonly("_num_nodes", &PipelineTemplate::get_num_nodes)
       .def_property_readonly("_num_gpus_per_node",
                              &PipelineTemplate::get_num_gpus_per_node)
-      .def("__repr__", [](const PipelineTemplate &pt) {
-        return pt.to_string();
-      });
+      .def("__repr__",
+           [](const PipelineTemplate &pt) { return pt.to_string(); });
 
   py::class_<NodeConfig>(m, "NodeConfig")
       .def(py::init<const std::string, const int, const int, const double>(),
@@ -124,9 +122,8 @@ PYBIND11_MODULE(pipeline_template, m) {
   py::class_<HeteroPipelineTemplate>(m, "HeteroPipelineTemplate")
       .def(py::init<const std::vector<std::shared_ptr<StageExecutionResult>> &,
                     const double, const double, const double, const double,
-                    const double,
-                    const int,
-                    const int, const HeteroNodeSpec &>())
+                    const double, const int, const int,
+                    const HeteroNodeSpec &>())
       .def("get_stages", &HeteroPipelineTemplate::get_stages)
       .def("get_node_spec", &HeteroPipelineTemplate::get_node_spec)
       .def_property_readonly("_iteration_time",
@@ -136,9 +133,8 @@ PYBIND11_MODULE(pipeline_template, m) {
       .def_property_readonly("_t3", &HeteroPipelineTemplate::get_t3)
       .def_property_readonly("_kstar_latency",
                              &HeteroPipelineTemplate::get_kstar_latency)
-      .def("__repr__", [](const HeteroPipelineTemplate &hpt) {
-        return hpt.to_string();
-      });
+      .def("__repr__",
+           [](const HeteroPipelineTemplate &hpt) { return hpt.to_string(); });
 
   py::class_<PipelineTemplateGenerator>(m, "PipelineTemplateGenerator")
       .def(py::init<>())
@@ -147,9 +143,12 @@ PYBIND11_MODULE(pipeline_template, m) {
       .def("create_hetero_pipeline_template",
            &PipelineTemplateGenerator::create_hetero_pipeline_template)
       .def("get_dc_cache", &PipelineTemplateGenerator::get_dc_cache);
-  
+
   py::class_<GreedyPipelineRecoverSolver>(m, "GreedyPipelineRecoverSolver")
-      .def(py::init<const PipelineTemplate&, const std::vector<float>&, const HeteroNodeSpec&, const std::vector<std::shared_ptr<LayerExecutionResults>>>())
+      .def(
+          py::init<const PipelineTemplate &, const std::vector<float> &,
+                   const HeteroNodeSpec &,
+                   const std::vector<std::shared_ptr<LayerExecutionResults>>>())
       .def("set_dc_cache", &GreedyPipelineRecoverSolver::set_dc_cache)
       .def("solve", &GreedyPipelineRecoverSolver::solve);
 
