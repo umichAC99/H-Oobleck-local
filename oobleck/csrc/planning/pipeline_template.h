@@ -150,6 +150,8 @@ class PipelineTemplateGenerator {
   CacheMap dc_cache_;
   cppcoro::static_thread_pool thread_pool_ = cppcoro::static_thread_pool(1);
 
+  const CacheMap* get_dc_cache() const{ return &dc_cache_; }
+
   std::vector<PipelineTemplate> create_pipeline_templates(
       std::shared_ptr<LayerExecutionResults> layer_execution_results,
       const std::tuple<int, int>& num_nodes,

@@ -11,6 +11,7 @@
 #include <ranges>
 #include <string>
 #include <map>
+#include "oobleck_utils.h"
 
 #ifdef PYBIND11_MODULE
 #include <pybind11/pybind11.h>
@@ -28,6 +29,9 @@ namespace oobleck {
 
 std::vector<SingleNodeSpec> node_specs;
 std::map<std::string, int> node_specs_map;
+
+bool is_timing_starts = false;
+std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
 
 std::string HeteroNodeSpec::get_cache_key() const {
   std::string result = "";
@@ -66,23 +70,6 @@ std::vector<HeteroNodeSpec> generateSubsets(const HeteroNodeSpec &heteroSpec) {
     currentSubset.node_specs[i].num_nodes = 0;
   }
   generateSubsetsUtil(heteroSpec, allSubsets, currentSubset, 0);
-
-#ifdef DEBUG
-  // Print all subsets for demonstration purposes
-  for (const auto &subset : allSubsets) {
-    std::cout << subset.to_string() << std::endl;
-  }
-  std::cout << std::endl;
-
-  std::cout << "Total number of subsets: " << allSubsets.size() << std::endl;
-
-  // Check there are no duplicates
-  for (int i = 0; i < allSubsets.size(); ++i) {
-    for (int j = i + 1; j < allSubsets.size(); ++j) {
-      assert(!(allSubsets[i].node_specs == allSubsets[j].node_specs));
-    }
-  }
-#endif
   return allSubsets;
 }
 

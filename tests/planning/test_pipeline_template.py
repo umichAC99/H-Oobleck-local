@@ -38,7 +38,8 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
             32,
         )[0]
         print(pipeline_template_origin)
-        solver = GreedyPipelineRecoverSolver(pipeline_template_origin, scaling_factors, node_spec)
+        solver = GreedyPipelineRecoverSolver(pipeline_template_origin, scaling_factors, node_spec, profiles)
+        solver.set_dc_cache(generator)
         plan = solver.solve()
         # plan = recovery(pipeline_template_origin, scaling_factors, node_spec)
         # compare(plan, pipeline_template)
