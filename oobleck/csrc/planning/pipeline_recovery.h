@@ -10,11 +10,12 @@ protected:
   const PipelineTemplate &pipeline_template_;
   const std::vector<float> scaling_factors_;
   const HeteroNodeSpec &hetero_node_spec_;
+  const int num_mbatches_;
   const CacheMap *dc_cache_ = nullptr;
 
   std::shared_ptr<oobleck::DCExecutionResult>
   try_assign(int idx, int node_type, int assigned_device,
-             const std::shared_ptr<LayerExecutionResults> &profile,
+             std::shared_ptr<LayerExecutionResults> profile,
              HeteroNodeSpec &spec,
              std::vector<std::shared_ptr<StageExecutionResult>> &stages,
              const HeteroNodeSpec &left, const HeteroNodeSpec &right) const;
@@ -22,9 +23,10 @@ protected:
 public:
   BasePipelineRecoverSolver(const PipelineTemplate &pipeline_template,
                             const std::vector<float> &scaling_factors,
-                            const HeteroNodeSpec &hetero_node_spec)
+                            const HeteroNodeSpec &hetero_node_spec,
+                            const int num_mbatches)
       : pipeline_template_(pipeline_template),
-        scaling_factors_(scaling_factors), hetero_node_spec_(hetero_node_spec) {
+        scaling_factors_(scaling_factors), hetero_node_spec_(hetero_node_spec), num_mbatches_(num_mbatches) {
   }
 
   virtual ~BasePipelineRecoverSolver() = default;
@@ -43,9 +45,10 @@ class GreedyPipelineRecoverSolver : public BasePipelineRecoverSolver {
 public:
   GreedyPipelineRecoverSolver(const PipelineTemplate &pipeline_template,
                               const std::vector<float> &scaling_factors,
-                              const HeteroNodeSpec &hetero_node_spec)
+                              const HeteroNodeSpec &hetero_node_spec,
+                              const int num_mbatches)
       : BasePipelineRecoverSolver(pipeline_template, scaling_factors,
-                                  hetero_node_spec) {}
+                                  hetero_node_spec, num_mbatches) {}
 
   HeteroPipelineTemplate
   solve(const std::vector<std::shared_ptr<LayerExecutionResults>>

@@ -73,7 +73,7 @@ static void update_node_spec(std::shared_ptr<StageExecutionResult> stage,
 std::shared_ptr<oobleck::DCExecutionResult>
 BasePipelineRecoverSolver::try_assign(
     int idx, int node_type, int assigned_device,
-    const std::shared_ptr<LayerExecutionResults> &profile, HeteroNodeSpec &curr,
+    std::shared_ptr<LayerExecutionResults> profile, HeteroNodeSpec &curr,
     std::vector<std::shared_ptr<StageExecutionResult>> &stages,
     const HeteroNodeSpec &left, const HeteroNodeSpec &right) const {
 
@@ -107,22 +107,37 @@ BasePipelineRecoverSolver::try_assign(
   }
 
   // create new DCExecutionResult based on current assignment
-  auto curr_result = std::make_shared<DCExecutionResult>(
-      (std::make_shared<StageExecutionResult>(
+  auto stage = std::make_shared<StageExecutionResult>(
           profile,
-          std::make_tuple(stages[idx]->layer_indices_[0],
-                          stages[idx]->layer_indices_[1]),
-          assigned_device, node_type)));
+          std::make_tuple(stages[idx]->get_start_layer_index(),
+                          stages[idx]->get_end_layer_index()+1),
+          assigned_device, node_type);
+  auto curr_result = std::make_shared<DCExecutionResult>(stage);
+  PRINT("Curr T " + std::to_string(curr_result->get_t()) + " Curr T1 " +
+        std::to_string(curr_result->get_t1()) + " Curr T2 " +
+        std::to_string(curr_result->get_t2()) + " Curr T3 " +
+        std::to_string(curr_result->get_t3()) + " Curr Kstar " +
+        std::to_string(curr_result->get_kstar_latency()));
 
   // merge left and current result
   if (left_result != nullptr) {
-    curr_result = std::make_shared<DCExecutionResult>(left_result, curr_result);
+    curr_result = std::make_shared<DCExecutionResult>(left_result, curr_result, num_mbatches_);
+    PRINT("left T " + std::to_string(left_result->get_t())
+          + " left T1 " + std::to_string(left_result->get_t1())
+          + " left T2 " + std::to_string(left_result->get_t2())
+          + " left T3 " + std::to_string(left_result->get_t3())
+          + " left Kstar " + std::to_string(left_result->get_kstar_latency()));
   }
 
   // merge right and current result
   if (right_result != nullptr) {
     curr_result =
-        std::make_shared<DCExecutionResult>(curr_result, right_result);
+        std::make_shared<DCExecutionResult>(curr_result, right_result, num_mbatches_);
+    PRINT("right T " + std::to_string(right_result->get_t())
+          + " right T1 " + std::to_string(right_result->get_t1())
+          + " right T2 " + std::to_string(right_result->get_t2())
+          + " right T3 " + std::to_string(right_result->get_t3())
+          + " right Kstar " + std::to_string(right_result->get_kstar_latency()));
   }
 
   // assert curr_result is not in cache
@@ -218,6 +233,7 @@ HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve(
       int min_idx = -1;
       int min_time_assigned_device = -1;
       int assigned_device = -1;
+      std::shared_ptr<oobleck::DCExecutionResult> min_cost_dc_result = nullptr;
 
       // update left and right ptrs, empty left first
       left_spec = curr_spec;
@@ -258,10 +274,21 @@ HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve(
         auto dc_result =
             try_assign(j, i, assigned_device, layer_execution_results[i],
                        curr_spec, curr_stages, left_spec, right_spec);
+        PRINT("Previous T is " + std::to_string(pipeline_template_.get_iteration_time())
+         + " Previous T1 is " + std::to_string(pipeline_template_.get_t1())
+         + " Previous T2 is " + std::to_string(pipeline_template_.get_t2())
+         + " Previous T3 is " + std::to_string(pipeline_template_.get_t3())
+         + " Previous Kstar is " + std::to_string(pipeline_template_.get_kstar_latency()));
+        PRINT("Current T is " + std::to_string(dc_result->get_t()) 
+         + " Current T1 is " + std::to_string(dc_result->get_t1())
+         + " Current T2 is " + std::to_string(dc_result->get_t2())
+         + " Current T3 is " + std::to_string(dc_result->get_t3())
+         + " Current Kstar is " + std::to_string(dc_result->get_kstar_latency()));
         if (dc_result->get_t() < min_time) {
           min_time = dc_result->get_t();
           min_idx = j;
           min_time_assigned_device = assigned_device;
+          min_cost_dc_result = dc_result;
         }
         // revert curr spec back
         replace_device(curr_spec, i, curr_stage_node_idx, assigned_device,
@@ -270,7 +297,8 @@ HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve(
         // assign current device to left spec
         replace_device(left_spec, i, curr_stage_node_idx, 0, curr_stage_gpu);
       } // for
-      // assign(min_idx, assigned_device, profile);
+      replace_device(curr_spec, 0, i, curr_stages[min_idx]->num_gpus_, assigned_device);
+      curr_stages = min_cost_dc_result->get_stages();
       assert(false && "Not Implemented!");
       assert(min_time_assigned_device != -1 && "Assigned device is not set");
       used_device += min_time_assigned_device;
