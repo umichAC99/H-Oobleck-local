@@ -15,9 +15,10 @@ protected:
   const CacheMap *dc_cache_ = nullptr;
 
   std::shared_ptr<oobleck::DCExecutionResult>
-  try_assign(int idx, int assigned_device,
+  try_assign(int idx, int node_type, int assigned_device,
              const std::shared_ptr<LayerExecutionResults> &profile, HeteroNodeSpec& spec,
-            std::vector<std::shared_ptr<StageExecutionResult>> & stages) const;
+            std::vector<std::shared_ptr<StageExecutionResult>> & stages,
+            const HeteroNodeSpec& left, const HeteroNodeSpec& right) const;
 
 public:
   BasePipelineRecoverSolver(

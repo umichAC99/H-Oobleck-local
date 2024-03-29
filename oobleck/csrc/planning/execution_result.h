@@ -125,8 +125,14 @@ public:
   static std::string get_device_indices_key(const int num_nodes,
                                             const int num_gpus_per_node,
                                             const int node_type_indices) {
-    std::string result = std::to_string(num_nodes) + "x" +
-                         std::to_string(num_gpus_per_node) + "x" +
+    std::string result = std::to_string(num_nodes * num_gpus_per_node) + "x" +
+                         std::to_string(node_type_indices);
+    return result;
+  }
+
+  static std::string get_device_indices_key(const int num_total_gpus,
+                                            const int node_type_indices) {
+    std::string result = std::to_string(num_total_gpus) + "x" +
                          std::to_string(node_type_indices);
     return result;
   }

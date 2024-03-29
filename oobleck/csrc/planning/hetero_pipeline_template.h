@@ -35,6 +35,7 @@ struct NodeConfig {
   int node_type_idx;
   int num_nodes;
   int num_gpus;
+  int num_total_gpus;
   double compute_power;
   // memory
   NodeConfig(std::string node_type, int num_nodes, int num_gpus_per_node,
@@ -49,11 +50,12 @@ struct NodeConfig {
     } else {
       node_type_idx = node_specs_map[node_type];
     }
+    num_total_gpus = num_nodes * num_gpus_per_node;
   }
 
   std::string to_string() const {
     return node_specs[node_type_idx].node_type + "[" +
-           std::to_string(num_nodes) + "nodes]";
+           std::to_string(num_nodes) + "nodes:" + std::to_string(num_total_gpus) + "]";
   }
 
   bool operator==(const NodeConfig &other) const {
@@ -121,6 +123,7 @@ struct HeteroNodeSpec {
   }
 
   std::string get_cache_key() const;
+  std::string get_cache_key_recovery() const;
 };
 
 class HeteroPipelineTemplate {

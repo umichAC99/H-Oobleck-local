@@ -47,14 +47,14 @@ namespace oobleck {
 
 static DCExecutionResult::key get_dc_key(int num_stages, int start_layer_idx,
                                           int end_layer_idx,
-                                          HeteroNodeSpec& spec) {
+                                          const HeteroNodeSpec& spec) {
     bool is_homo = spec.num_total_nodes == spec.node_specs[0].num_nodes;
     std::string device_key;
     if (is_homo){
         device_key =  DCExecutionResult::get_device_indices_key(
                           spec.node_specs[0].num_nodes, spec.node_specs[0].num_gpus, 0);
-    }   else{
-        device_key = spec.get_cache_key();
+    } else{
+        device_key = spec.get_cache_key_recovery();
     }
     return std::make_tuple(num_stages, start_layer_idx, end_layer_idx, device_key);
 }
@@ -66,15 +66,43 @@ static void update_node_spec(std::shared_ptr<StageExecutionResult> stage, int no
 
 std::shared_ptr<oobleck::DCExecutionResult>
 BasePipelineRecoverSolver::try_assign(
-    int idx, int assigned_device,
-    const std::shared_ptr<LayerExecutionResults> &profile, HeteroNodeSpec& spec,
-    std::vector<std::shared_ptr<StageExecutionResult>> & stages) const {
+    int idx, int node_type, int assigned_device,
+    const std::shared_ptr<LayerExecutionResults> &profile, HeteroNodeSpec& curr,
+    std::vector<std::shared_ptr<StageExecutionResult>> & stages,
+    const HeteroNodeSpec& left, const HeteroNodeSpec& right) const {
 
     // find DCExecutionResult from 0...idx-1
-    
+    std::shared_ptr<oobleck::DCExecutionResult> left_result = nullptr;
+    if (idx > 0){
+        auto key = get_dc_key(idx, 0, idx-1, left);
+        auto it = dc_cache_->find(key);
+        if (it != dc_cache_->end()){
+            left_result = it->second;
+        }
+    }
 
     // find DCExecutionResult from idx+1...end
+    std::shared_ptr<oobleck::DCExecutionResult> right_result = nullptr;
+    if (idx < stages.size()-1){
+        auto key = get_dc_key(stages.size()-idx-1, idx+1, stages.size()-1, right);
+        auto it = dc_cache_->find(key);
+        if (it != dc_cache_->end()){
+            right_result = it->second;
+        }
+    }
+
+    auto new_stage = std::make_shared<StageExecutionResult>(
+        profile, std::make_tuple(stages[idx]->layer_indices_[0], stages[idx]->layer_indices_[1]), assigned_device, node_type);
   return nullptr;
+}
+
+static void empty_node_spec(HeteroNodeSpec& spec){
+    for (int i = 0; i < spec.node_specs.size(); i++) {
+        spec.node_specs[i].num_nodes = 0;
+        spec.node_specs[i].num_gpus = 0;
+        spec.node_specs[i].num_total_gpus = 0;
+    }
+    spec.update_fields();
 }
 
 HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve() const {
@@ -90,44 +118,62 @@ HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve() const {
     if (i == 0){
         curr_spec.node_specs[i].num_nodes = pipeline_template_.get_num_nodes();
         curr_spec.node_specs[i].num_gpus = pipeline_template_.get_num_gpus_per_node();
+        curr_spec.node_specs[i].num_total_gpus = pipeline_template_.get_num_gpus_per_node() * pipeline_template_.get_num_nodes();
     }   else {
         curr_spec.node_specs[i].num_nodes = 0;
-        curr_spec.node_specs[i].num_gpus = 0;
+        curr_spec.node_specs[i].num_gpus = pipeline_template_.get_num_gpus_per_node();
+        curr_spec.node_specs[i].num_total_gpus = 0;
     }
   }
   curr_spec.update_fields();
-  left_spec = curr_spec;
-  right_spec = curr_spec;
   PRINT("Curr Spec: " + curr_spec.to_string());
 
   assert(false && "Not implemented");
   // start greedy algorithm
-  for (int i = hetero_node_spec_.node_specs.size()-1; i >= 0; i++) {
+  for (int i = hetero_node_spec_.node_specs.size()-1; i > 0; i++) {
     int used_device = 0;
     int total_device = hetero_node_spec_.node_specs[i].num_nodes *
                        hetero_node_spec_.node_specs[i].num_gpus;
     while (used_device < total_device) {
       double min_time = std::numeric_limits<double>::max();
       int min_idx = -1;
+      int min_time_assigned_device = -1;
       int assigned_device = -1;
       for (int j = 0; j < curr_stages.size(); j++) {
+
+        // update left and right ptrs, empty left first
+        left_spec = curr_spec;
+        right_spec = curr_spec;
+        empty_node_spec(left_spec);
+
+        // assign device to stage based on scaling factor f
         double assigned_device_f = curr_stages[j]->num_gpus_ / scaling_factors_[i];
         if (assigned_device_f < 0.5)
           continue;
         else if (assigned_device_f + used_device > total_device)
           assigned_device_f = total_device - used_device;
-        else
-          assigned_device = ceil(assigned_device_f);
+        
+        assigned_device = ceil(assigned_device_f);
+        assert(assigned_device > 0 && "Assigned device is not set");
 
-        auto dc_result = try_assign(j, assigned_device, layer_execution_results_[i], curr_spec, curr_stages);
+        // try to assign node idx i with assigned_device to stage, update left and right spec
+
+        // TODO: instead of -1, we should minus the number of gpus
+        curr_spec.node_specs[0].num_total_gpus -= curr_stages[j]->num_gpus_;
+        curr_spec.node_specs[i].num_total_gpus += assigned_device;
+        right_spec.node_specs[0].num_total_gpus -= curr_stages[j]->num_gpus_;
+        auto dc_result = try_assign(j, i, assigned_device, layer_execution_results_[i], curr_spec, curr_stages, left_spec, right_spec);
         if (dc_result->get_t() < min_time) {
           min_time = dc_result->get_t();
           min_idx = j;
+          min_time_assigned_device = assigned_device;
         }
+        left_spec.node_specs[0].num_total_gpus += curr_stages[j]->num_gpus_;
       }
-      assert(assigned_device > 0 && "Assigned device is not set");
       // assign(min_idx, assigned_device, profile);
-      used_device += assigned_device;
+      assert(false && "Not Implemented!");
+      assert(min_time_assigned_device != -1 && "Assigned device is not set");
+      used_device += min_time_assigned_device;
     }
   }
 

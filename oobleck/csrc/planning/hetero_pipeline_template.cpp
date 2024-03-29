@@ -36,12 +36,32 @@ std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
 std::string HeteroNodeSpec::get_cache_key() const {
   std::string result = "";
   for (auto &config : node_specs) {
+    if (config.num_nodes == 0) {
+      continue;
+    }
     result += DCExecutionResult::get_device_indices_key(
                   config.num_nodes, config.num_gpus, config.node_type_idx) +
               "-";
   }
+  assert(result.size() > 0 && "Cache key is empty");
   result.pop_back();
   return result;
+}
+
+std::string HeteroNodeSpec::get_cache_key_recovery() const {
+  std::string result = "";
+  for (auto &config : node_specs) {
+    if (config.num_nodes == 0) {
+      continue;
+    }
+    result += DCExecutionResult::get_device_indices_key(
+                  config.num_total_gpus, config.node_type_idx) +
+              "-";
+  }
+  assert(result.size() > 0 && "Cache key is empty");
+  result.pop_back();
+  return result;
+
 }
 
 void generateSubsetsUtil(const HeteroNodeSpec &originalSpec,
