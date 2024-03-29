@@ -6,7 +6,7 @@
 
 #define DEBUG
 #ifdef DEBUG
-#define PRINT(x) std::cout << "[DEBUG]: " << x << std::endl
+#define PRINT(x) std::cout << "[DEBUG]: " << x << std::endl << std::flush
 #else
 #define PRINT(x)
 #endif

@@ -1,4 +1,5 @@
 import pytest
+import sys
 
 from oobleck.csrc.planning.pipeline_template import (
     LayerExecutionResults,
@@ -17,20 +18,23 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         generator = PipelineTemplateGenerator()
         node_spec = self.factory.get_dummy_hetero_node_spec()
         profiles = self.factory.get_dummy_profile_by_scaling(node_spec)
-        print(node_spec)
-        print(profiles)
-        print("LOG: running ground truth")
-        pipeline_template = generator.create_hetero_pipeline_template(
-            profiles,
-            node_spec,
-            32,
-        )
-        print(pipeline_template)
+        # print(node_spec)
+        # print(profiles)
+        # print("LOG: running ground truth")
+        # pipeline_template = generator.create_hetero_pipeline_template(
+        #     profiles,
+        #     node_spec,
+        #     32,
+        # )
+        # print(pipeline_template)
         print("LOG: running node folding")
         (num_nodes, num_gpus_per_node, scaling_factors) = self.factory.dummy_node_folding(profiles, node_spec)
         print("num_nodes: ", num_nodes)
         print("num_gpus_per_node: ", num_gpus_per_node)
         print("scaling_factors: ", scaling_factors)
+        print("num layers: ", len(profiles[0].get()))
+        # flush print buffer
+        sys.stdout.flush()
         pipeline_template_origin = generator.create_pipeline_templates(
             profiles[0],
             (num_nodes, num_nodes),  # num nodes range
@@ -38,9 +42,9 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
             32,
         )[0]
         print(pipeline_template_origin)
-        solver = GreedyPipelineRecoverSolver(pipeline_template_origin, scaling_factors, node_spec, profiles)
+        solver = GreedyPipelineRecoverSolver(pipeline_template_origin, scaling_factors, node_spec)
         solver.set_dc_cache(generator)
-        plan = solver.solve()
+        plan = solver.solve(profiles)
         # plan = recovery(pipeline_template_origin, scaling_factors, node_spec)
         # compare(plan, pipeline_template)
         

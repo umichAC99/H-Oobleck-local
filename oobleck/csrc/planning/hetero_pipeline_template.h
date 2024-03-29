@@ -55,7 +55,8 @@ struct NodeConfig {
 
   std::string to_string() const {
     return node_specs[node_type_idx].node_type + "[" +
-           std::to_string(num_nodes) + "nodes:" + std::to_string(num_total_gpus) + "]";
+           std::to_string(num_nodes) +
+           "nodes:" + std::to_string(num_total_gpus) + "]";
   }
 
   bool operator==(const NodeConfig &other) const {
@@ -65,16 +66,16 @@ struct NodeConfig {
 
 struct HeteroNodeSpec {
   std::vector<NodeConfig> node_specs;
-  float num_total_nodes_f;
   int num_total_nodes = 0;
-  int idx_to_only_node = -1; // index to the node that has only one node; other nodes
-                        // are 0.
-  HeteroNodeSpec(const std::vector<NodeConfig>& node_specs)
+  int num_total_gpus = 0;
+  int idx_to_only_node = -1; // index to the node that has only one node; other
+                             // nodes are 0.
+  HeteroNodeSpec(const std::vector<NodeConfig> &node_specs)
       : node_specs(node_specs), num_total_nodes(0) {
     update_fields();
   }
-   HeteroNodeSpec(const std::vector<NodeConfig>& node_specs, int num_total_nodes)
-      : node_specs(node_specs), num_total_nodes(num_total_nodes){}
+  HeteroNodeSpec(const std::vector<NodeConfig> &node_specs, int num_total_nodes)
+      : node_specs(node_specs), num_total_nodes(num_total_nodes) {}
   HeteroNodeSpec() : num_total_nodes(0), idx_to_only_node(-1) {}
 
   // update num_total_nodes and idx_to_only_node when node_specs is updated
@@ -83,6 +84,7 @@ struct HeteroNodeSpec {
     for (int i = 0; i < node_specs.size(); i++) {
       auto &node_spec = node_specs[i];
       num_total_nodes += node_spec.num_nodes;
+      num_total_gpus += node_spec.num_total_gpus;
 
       // point idx_to_only_node to the only node
       if (node_spec.num_nodes == 1)
@@ -96,7 +98,8 @@ struct HeteroNodeSpec {
   }
 
   // subtract another HeteroNodeSpec(a subset) from this
-  HeteroNodeSpec subtract(const HeteroNodeSpec &other, bool need_update = true) const {
+  HeteroNodeSpec subtract(const HeteroNodeSpec &other,
+                          bool need_update = true) const {
     std::vector<NodeConfig> new_node_specs = node_specs;
     int total_nodes = num_total_nodes;
     for (int i = 0; i < node_specs.size(); i++) {
@@ -104,16 +107,17 @@ struct HeteroNodeSpec {
       total_nodes -= other.node_specs[i].num_nodes;
       assert(new_node_specs[i].num_nodes >= 0 && total_nodes >= 0);
     }
-    if (need_update){
+    if (need_update) {
       return HeteroNodeSpec(new_node_specs);
-    }  else {
+    } else {
       return HeteroNodeSpec(new_node_specs, total_nodes);
     }
   }
 
   std::string to_string() const {
     std::string result = "[";
-    result += "#: " + std::to_string(num_total_nodes) + ", ";
+    result += "node#: " + std::to_string(num_total_nodes) + ", ";
+    result += "gpu#: " + std::to_string(num_total_gpus) + ", ";
     result += "idx: " + std::to_string(idx_to_only_node) + ", ";
     for (auto &config : node_specs) {
       result += "[" + config.to_string() + "] ";

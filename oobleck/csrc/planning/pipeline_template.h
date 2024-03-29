@@ -141,7 +141,7 @@ public:
 
   const CacheMap *get_dc_cache() const { return &dc_cache_; }
 
-  void print_dc_cache() const{
+  void print_dc_cache() const {
     PRINT("DC CACHE:");
     for (const auto &entry : dc_cache_) {
       std::string string_key = std::to_string(std::get<0>(entry.first)) + "[" +
@@ -149,7 +149,8 @@ public:
                                std::to_string(std::get<2>(entry.first)) + "]" +
                                std::get<3>(entry.first);
       if (entry.second != nullptr)
-        PRINT("key: " + string_key + " -> " + "value: " + entry.second->to_string());
+        PRINT("key: " + string_key + " -> " +
+              "value: " + entry.second->to_string());
     }
   }
 

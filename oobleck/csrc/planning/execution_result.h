@@ -99,6 +99,8 @@ public:
   }
 
   int num_layers() const { return layer_indices_.size(); }
+  int get_start_layer_index() const { return layer_indices_.front(); }
+  int get_end_layer_index() const { return layer_indices_.back(); }
   std::string to_string() const {
     int first_layer_index = layer_indices_.front();
     int last_layer_index = layer_indices_.back();
@@ -121,6 +123,12 @@ class DCExecutionResult {
 public:
   // # stage, start layer index, end layer index, device indices
   using key = std::tuple<int, int, int, std::string>;
+
+  static std::string key_to_string(const key &key) {
+    return std::to_string(std::get<0>(key)) + "[" +
+           std::to_string(std::get<1>(key)) + "-" +
+           std::to_string(std::get<2>(key)) + "]" + std::get<3>(key);
+  }
 
   static std::string get_device_indices_key(const int num_nodes,
                                             const int num_gpus_per_node,

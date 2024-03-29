@@ -54,14 +54,13 @@ std::string HeteroNodeSpec::get_cache_key_recovery() const {
     if (config.num_nodes == 0) {
       continue;
     }
-    result += DCExecutionResult::get_device_indices_key(
-                  config.num_total_gpus, config.node_type_idx) +
+    result += DCExecutionResult::get_device_indices_key(config.num_total_gpus,
+                                                        config.node_type_idx) +
               "-";
   }
   assert(result.size() > 0 && "Cache key is empty");
   result.pop_back();
   return result;
-
 }
 
 void generateSubsetsUtil(const HeteroNodeSpec &originalSpec,

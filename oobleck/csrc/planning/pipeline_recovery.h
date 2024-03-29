@@ -8,32 +8,30 @@ namespace oobleck {
 class BasePipelineRecoverSolver {
 protected:
   const PipelineTemplate &pipeline_template_;
-  const std::vector<float> &scaling_factors_;
+  const std::vector<float> scaling_factors_;
   const HeteroNodeSpec &hetero_node_spec_;
-  const std::vector<std::shared_ptr<LayerExecutionResults>>
-      &layer_execution_results_;
   const CacheMap *dc_cache_ = nullptr;
 
   std::shared_ptr<oobleck::DCExecutionResult>
   try_assign(int idx, int node_type, int assigned_device,
-             const std::shared_ptr<LayerExecutionResults> &profile, HeteroNodeSpec& spec,
-            std::vector<std::shared_ptr<StageExecutionResult>> & stages,
-            const HeteroNodeSpec& left, const HeteroNodeSpec& right) const;
+             const std::shared_ptr<LayerExecutionResults> &profile,
+             HeteroNodeSpec &spec,
+             std::vector<std::shared_ptr<StageExecutionResult>> &stages,
+             const HeteroNodeSpec &left, const HeteroNodeSpec &right) const;
 
 public:
-  BasePipelineRecoverSolver(
-      const PipelineTemplate &pipeline_template,
-      const std::vector<float> &scaling_factors,
-      const HeteroNodeSpec &hetero_node_spec,
-      const std::vector<std::shared_ptr<LayerExecutionResults>>
-          &layer_execution_results)
+  BasePipelineRecoverSolver(const PipelineTemplate &pipeline_template,
+                            const std::vector<float> &scaling_factors,
+                            const HeteroNodeSpec &hetero_node_spec)
       : pipeline_template_(pipeline_template),
-        scaling_factors_(scaling_factors), hetero_node_spec_(hetero_node_spec),
-        layer_execution_results_(layer_execution_results_) {}
+        scaling_factors_(scaling_factors), hetero_node_spec_(hetero_node_spec) {
+  }
 
   virtual ~BasePipelineRecoverSolver() = default;
 
-  virtual HeteroPipelineTemplate solve() const = 0;
+  virtual HeteroPipelineTemplate
+  solve(const std::vector<std::shared_ptr<LayerExecutionResults>>
+            &layer_execution_results) const = 0;
 
   void set_dc_cache(const PipelineTemplateGenerator &ptg) {
     dc_cache_ = ptg.get_dc_cache();
@@ -43,16 +41,15 @@ public:
 
 class GreedyPipelineRecoverSolver : public BasePipelineRecoverSolver {
 public:
-  GreedyPipelineRecoverSolver(
-      const PipelineTemplate &pipeline_template,
-      const std::vector<float> &scaling_factors,
-      const HeteroNodeSpec &hetero_node_spec,
-      const std::vector<std::shared_ptr<LayerExecutionResults>>
-          &layer_execution_results)
+  GreedyPipelineRecoverSolver(const PipelineTemplate &pipeline_template,
+                              const std::vector<float> &scaling_factors,
+                              const HeteroNodeSpec &hetero_node_spec)
       : BasePipelineRecoverSolver(pipeline_template, scaling_factors,
-                                  hetero_node_spec, layer_execution_results_) {}
+                                  hetero_node_spec) {}
 
-  HeteroPipelineTemplate solve() const override;
+  HeteroPipelineTemplate
+  solve(const std::vector<std::shared_ptr<LayerExecutionResults>>
+            &layer_execution_results) const override;
 };
 } // namespace oobleck
 

@@ -145,10 +145,8 @@ PYBIND11_MODULE(pipeline_template, m) {
       .def("get_dc_cache", &PipelineTemplateGenerator::get_dc_cache);
 
   py::class_<GreedyPipelineRecoverSolver>(m, "GreedyPipelineRecoverSolver")
-      .def(
-          py::init<const PipelineTemplate &, const std::vector<float> &,
-                   const HeteroNodeSpec &,
-                   const std::vector<std::shared_ptr<LayerExecutionResults>>>())
+      .def(py::init<const PipelineTemplate &, const std::vector<float> &,
+                    const HeteroNodeSpec &>())
       .def("set_dc_cache", &GreedyPipelineRecoverSolver::set_dc_cache)
       .def("solve", &GreedyPipelineRecoverSolver::solve);
 

@@ -151,8 +151,8 @@ PipelineTemplateGenerator::create_pipeline_templates(
 
     assert(optimal_result != nullptr &&
            optimal_result->get_stages().size() > 0);
-    
-    // print_dc_cache();
+
+    print_dc_cache();
 
 #ifdef DEBUG_PIPELINE_TEMPLATE
     std::shared_ptr<DCExecutionResult> result(nullptr);
@@ -374,7 +374,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           result = new_result;
         }
       }
-      // }
+      //  }
     }
   }
 
