@@ -2,6 +2,7 @@
 #define _OOBLECK_HETERO_PLANNING_PIPELINE_TEMPLATE_H_
 
 #include "execution_result.h"
+#include "oobleck_utils.h"
 #include <atomic>
 #include <cppcoro/static_thread_pool.hpp>
 #include <cppcoro/sync_wait.hpp>
@@ -153,9 +154,14 @@ public:
     }
 
     for (int i = 0; i < num_gpus_used.size(); i++) {
+      PRINT("num_gpus_used for node type i : " + std::to_string(num_gpus_used[i]));
+      PRINT("availiavble num_gpus for node type i : " + std::to_string(
+            node_spec.node_specs[i].num_nodes *
+                node_spec.node_specs[node_spec.node_specs[i].node_type_idx]
+                    .num_gpus));
       assert(num_gpus_used[i] ==
              node_spec.node_specs[i].num_nodes *
-                 node_specs[node_spec.node_specs[i].node_type_idx].num_gpus);
+                 node_spec.node_specs[node_spec.node_specs[i].node_type_idx].num_gpus);
     }
 
     int stage_num_layers = 0;

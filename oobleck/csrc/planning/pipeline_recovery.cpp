@@ -337,6 +337,8 @@ HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve(
         &layer_execution_results) {
 
   assert(dc_cache_ != nullptr && "DC Cache is not set");
+  assert(pipeline_template_.get_num_layers() == layer_execution_results[0]->size() &&
+         "Layer Execution Results size is not equal to pipeline template size");
   auto curr_stages = pipeline_template_.get_stages();
   HeteroNodeSpec curr_spec, left_spec, right_spec;
 
@@ -365,7 +367,8 @@ HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve(
   }
 
   // start greedy algorithm
-  for (int i = hetero_node_spec_.node_specs.size() - 1; i > 0; i++) {
+  std::shared_ptr<oobleck::DCExecutionResult> min_cost_dc_result = nullptr;
+  for (int i = hetero_node_spec_.node_specs.size() - 1; i > 0; i--) {
     int used_device = 0;
     int total_device = hetero_node_spec_.node_specs[i].num_nodes *
                        hetero_node_spec_.node_specs[i].num_gpus;
@@ -374,7 +377,7 @@ HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve(
       int min_idx = -1;
       int min_time_assigned_device = -1;
       int assigned_device = -1;
-      std::shared_ptr<oobleck::DCExecutionResult> min_cost_dc_result = nullptr;
+      min_cost_dc_result = nullptr;
 
       // update left and right ptrs, empty left first
       left_spec = curr_spec;
@@ -455,15 +458,12 @@ HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve(
       update_dc_cache(min_idx, curr_stages, left_spec, right_spec);
       used_device += min_time_assigned_device;
     } // while
-    assert(false && "Not Implemented!");
   }
 
   return HeteroPipelineTemplate(
-      pipeline_template_.get_stages(), pipeline_template_.get_t1(),
-      pipeline_template_.get_t2(), pipeline_template_.get_t3(),
-      pipeline_template_.get_kstar_latency(),
-      pipeline_template_.get_iteration_time(),
-      pipeline_template_.get_num_mbatches(),
-      pipeline_template_.get_num_layers(), hetero_node_spec_);
+    curr_stages, min_cost_dc_result->get_t1(), min_cost_dc_result->get_t2(),
+    min_cost_dc_result->get_t3(), min_cost_dc_result->get_kstar_latency(),
+    min_cost_dc_result->get_t(),
+    num_mbatches_, layer_execution_results[0]->size(), hetero_node_spec_);
 }
 } // namespace oobleck

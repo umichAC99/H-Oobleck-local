@@ -2,7 +2,6 @@
 #define _OOBLECK_PIPELINE_RECOVERY_H_
 
 #include "hetero_pipeline_template.h"
-#include "oobleck_utils.h"
 #include "pipeline_template.h"
 #include <map>
 namespace oobleck {

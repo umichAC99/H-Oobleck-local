@@ -38,13 +38,21 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         pipeline_template_origin = generator.create_pipeline_templates(
             profiles[0],
             (num_nodes, num_nodes),  # num nodes range
-            2,
+            num_gpus_per_node,
             32,
         )[0]
         print(pipeline_template_origin)
         solver = GreedyPipelineRecoverSolver(pipeline_template_origin, scaling_factors, node_spec, 32)
         solver.set_dc_cache(generator)
         plan = solver.solve(profiles)
+        print("approximated plan ", plan)
+        
+        pipeline_template = generator.create_hetero_pipeline_template(
+            profiles,
+            node_spec,
+            32,
+        )
+        print("real plan ", pipeline_template)
         # plan = recovery(pipeline_template_origin, scaling_factors, node_spec)
         # compare(plan, pipeline_template)
         
