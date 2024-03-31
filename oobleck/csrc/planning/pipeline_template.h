@@ -139,7 +139,7 @@ public:
   CacheMap dc_cache_;
   cppcoro::static_thread_pool thread_pool_ = cppcoro::static_thread_pool(1);
 
-  const CacheMap *get_dc_cache() const { return &dc_cache_; }
+  CacheMap *get_dc_cache() { return &dc_cache_; }
 
   void print_dc_cache() const {
     PRINT("DC CACHE:");

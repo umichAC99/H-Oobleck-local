@@ -107,8 +107,9 @@ public:
     return "StageExecutionResult[" + std::to_string(first_layer_index) + ":" +
            std::to_string(last_layer_index) + "] with " +
            std::to_string(num_gpus_) + " devices on node type " +
-           std::to_string(node_type_idx_) + " forward: " + std::to_string(forward_) +
-            ", backward: " + std::to_string(backward_);
+           std::to_string(node_type_idx_) +
+           " forward: " + std::to_string(forward_) +
+           ", backward: " + std::to_string(backward_);
   }
 
   int num_gpus_;
