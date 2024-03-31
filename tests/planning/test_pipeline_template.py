@@ -12,8 +12,8 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     def profile(self) -> LayerExecutionResults:
         return self.factory.get_dummy_profile()
     
-    def test_hetero_node_spec(self, profile: LayerExecutionResults):
-        node_spec = self.factory.get_dummy_hetero_node_spec()
+    def test_hetero_node_spec(self, random: bool=False):
+        node_spec = self.factory.get_dummy_hetero_node_spec(random=random)
 
         assert node_spec.size() > 0
         assert len(node_spec.get()) > 0
@@ -22,6 +22,9 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
             assert node_config._num_gpus > 0
             assert node_config._num_nodes > 0
         print(node_spec)
+    
+    def test_hetero_node_spec_random(self):
+        return self.test_hetero_node_spec(random=True)
     
     def test_create_hetero_pipeline_templates(self):
         generator = PipelineTemplateGenerator()

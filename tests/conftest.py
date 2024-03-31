@@ -169,15 +169,19 @@ class OobleckStaticClassFactory:
 
         return results
     
-    def get_dummy_hetero_node_spec(self) -> HeteroNodeSpec:
-
-        return HeteroNodeSpec(
-            [
-                NodeConfig("A100", 1, 2, 1.0),
-                NodeConfig("V100", 2, 2, 0.8),
-                NodeConfig("B100", 2, 2, 1.2)
-            ]
-        )
+    def get_dummy_hetero_node_spec(self, random: bool=False, seed: int=0) -> HeteroNodeSpec:
+        hetero_spec = None
+        if random:
+            pass
+        else:
+            hetero_spec = HeteroNodeSpec(
+                [
+                    NodeConfig("A100", 1, 2, 1.0),
+                    NodeConfig("V100", 2, 2, 0.8),
+                    NodeConfig("B100", 2, 2, 1.2)
+                ]
+            )
+        return hetero_spec
 
     def get_dummy_pipeline_template(
         self,
