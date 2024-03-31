@@ -21,7 +21,6 @@ protected:
   std::shared_ptr<oobleck::DCExecutionResult>
   try_assign(int idx, int node_type, int assigned_device,
              std::shared_ptr<LayerExecutionResults> profile,
-             HeteroNodeSpec &spec,
              std::vector<std::shared_ptr<StageExecutionResult>> &stages,
              const HeteroNodeSpec &left, const HeteroNodeSpec &right);
 

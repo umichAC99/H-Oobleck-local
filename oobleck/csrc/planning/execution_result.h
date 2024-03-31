@@ -234,7 +234,7 @@ public:
     repr += "kstar_latency: " + std::to_string(get_kstar_latency()) + ", ";
     repr += "stages: [";
     for (const auto &stage : get_stages()) {
-      repr += stage->to_string() + ", ";
+      repr += stage->to_string() + ", " + "\n";
     }
     repr.pop_back();
     repr.pop_back();
