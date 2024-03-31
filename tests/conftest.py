@@ -143,13 +143,24 @@ class OobleckStaticClassFactory:
 
         return self._profile
     
-    def get_dummy_hetero_profile(self) -> list[LayerExecutionResults]:
+    def get_dummy_layer_freq(self)->list[int]:
+        self.get_model()
+        num_layers = len(self._model.layers)
+        layer_freq = []
+        for i in range(num_layers):
+            freq = random.randint(0,10)
+            layer_freq.append(freq)
+        
+        return layer_freq
+        
+    
+    def get_dummy_hetero_profile(self) -> dict[str, LayerExecutionResults]:
         self.get_model()
 
-        results: list[LayerExecutionResults] = []
+        results: dict[str, LayerExecutionResults] = []
+        gputype = ["A100, V100, B100"]
         for i in range(3):
             num_layers = len(self._model.layers)
-
             layer_results: list[LayerExecutionResult] = []
             for index in range(num_layers):
                 layer_results.append(
@@ -165,9 +176,39 @@ class OobleckStaticClassFactory:
                     )
                 )
 
-            results.append(LayerExecutionResults(layer_results))
+            results[gputype[i]] = LayerExecutionResults(layer_results)
 
         return results
+    
+    #currently haven't considered all_reduce costs for a layer, because one layer is not mapped to nultiple devices??
+    def node_folding(self) -> dict[str, list[float]]: # dict[normalising GPUType, list[relative compute power]]
+        layer_cost = self.get_dummy_hetero_profile() # replace with getCostModel fn (Noah and Hithesh working on this)
+        layer_freq = self.get_dummy_layer_freq() # use XLA to get correct layer frequencies
+        result: dict[str, list[float]] = []
+        gpu_types = list(layer_cost.keys())
+        total_exec_time : list[float] =[]
+        for key, value in layer_cost.items():
+            exec_time = 0
+            for i in range(value.size()):
+                exec_time+= (value.at(i)._forward)*layer_freq(i)
+                exec_time+= (value.at(i)._backward)*layer_freq(i)
+            total_exec_time.append(exec_time)
+        
+        for i in range(len(gpu_types)):
+            relative_compute_power = [x/total_exec_time[i] for x in total_exec_time]
+            result[gpu_types[i]] = relative_compute_power
+        
+        return result
+            
+                
+                
+            
+            
+                
+            
+        
+                
+        
     
     def get_dummy_hetero_node_spec(self) -> HeteroNodeSpec:
 
