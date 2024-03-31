@@ -14,6 +14,13 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     
     def test_hetero_node_spec(self, profile: LayerExecutionResults):
         node_spec = self.factory.get_dummy_hetero_node_spec()
+
+        assert node_spec.size() > 0
+        assert len(node_spec.get()) > 0
+        assert node_spec.size() == len(node_spec.get())
+        for node_config in node_spec.get():
+            assert node_config._num_gpus > 0
+            assert node_config._num_nodes > 0
         print(node_spec)
     
     def test_create_hetero_pipeline_templates(self):
