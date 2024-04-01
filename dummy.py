@@ -9,7 +9,7 @@ Layer = 'LayerIdentifier'
 initialize_profiler, model_layers = ... 
 
 # Profiling results go here with real time hardware profiling data
-gpu_profile_data: dict[GpuType, list[LayerExecutionResult]] = {
+gpu_profile_data: dict[GpuType, LayerExecutionResults] = {
     'A100': [...],
     'V100': [...],
 }
@@ -18,7 +18,7 @@ def get_cost_model(gpu_types: list[GpuType], model_layers: list[Layer])
     -> list[dict]:
     """
     Function has this signature if it were C++
-    @return map<GpuType,vector<LayerExecutionResult>> 
+    @return map<GpuType,LayerExecutionResults> 
     @param vector<GpuType> gpuTypes
     @param vector<layer> modelLayers
 
@@ -26,7 +26,7 @@ def get_cost_model(gpu_types: list[GpuType], model_layers: list[Layer])
     modelLayers are Oobleck layer types
     the return type is a mapping from gpuType to an array of
     layerExecutionResult objects (these are oobleck data structures used to
-    input performance charactaristics.)
+    input performance characteristics.)
     """
 
     profiler = initialize_profiler() 
@@ -60,4 +60,4 @@ def get_cost_model(gpu_types: list[GpuType], model_layers: list[Layer])
             'layers': gpu_cost_info
         })
 
-    return cost_model
+    return gpu_profile_data
