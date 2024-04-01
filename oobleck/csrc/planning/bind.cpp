@@ -150,7 +150,6 @@ PYBIND11_MODULE(pipeline_template, m) {
   py::class_<GreedyPipelineRecoverSolver>(m, "GreedyPipelineRecoverSolver")
       .def(py::init<const PipelineTemplate &, const std::vector<float> &,
                     const HeteroNodeSpec &, const int>())
-      .def("set_dc_cache", &GreedyPipelineRecoverSolver::set_dc_cache)
       .def("solve", &GreedyPipelineRecoverSolver::solve);
 
   m.def("get_profile_results", &get_profile_results, py::arg("model_name"),

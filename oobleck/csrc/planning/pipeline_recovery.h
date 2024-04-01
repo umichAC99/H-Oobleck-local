@@ -11,7 +11,7 @@ protected:
   const std::vector<float> scaling_factors_;
   const HeteroNodeSpec &hetero_node_spec_;
   const int num_mbatches_;
-  CacheMap *dc_cache_ = nullptr;
+  CacheMap dc_cache_;
 
   // update dc_cache for homogenous pipeline template
   void update_homo_dc_cache(const std::vector<std::shared_ptr<StageExecutionResult>> &stages);
@@ -43,11 +43,6 @@ public:
   virtual HeteroPipelineTemplate
   solve(const std::vector<std::shared_ptr<LayerExecutionResults>>
             &layer_execution_results) = 0;
-
-  void set_dc_cache(PipelineTemplateGenerator &ptg) {
-    dc_cache_ = ptg.get_dc_cache();
-    PRINT("Finished Setting DC Cache ");
-  }
 };
 
 class GreedyPipelineRecoverSolver : public BasePipelineRecoverSolver {

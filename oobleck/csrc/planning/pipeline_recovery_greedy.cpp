@@ -51,7 +51,7 @@ HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve(
     const std::vector<std::shared_ptr<LayerExecutionResults>>
         &layer_execution_results) {
 
-  assert(dc_cache_ != nullptr && "DC Cache is not set");
+  dc_cache_.clear();
   assert(pipeline_template_.get_num_layers() ==
              layer_execution_results[0]->size() &&
          "Layer Execution Results size is not equal to pipeline template size");
