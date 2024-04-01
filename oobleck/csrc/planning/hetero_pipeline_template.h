@@ -63,6 +63,18 @@ struct HeteroNodeSpec {
   }
   HeteroNodeSpec(): num_total_nodes(0), idx_to_only_node(-1) {}
 
+  const std::vector<NodeConfig>& get() const {
+    return node_specs;
+  }
+
+  int size() const {
+    return num_total_nodes;
+  }
+
+  const NodeConfig& at(const int idx) const {
+    return node_specs[idx];
+  }
+
   // update num_total_nodes and idx_to_only_node when node_specs is updated
   void update_fields(){
     num_total_nodes = 0;

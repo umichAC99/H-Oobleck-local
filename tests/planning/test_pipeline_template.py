@@ -12,19 +12,26 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     def profile(self) -> LayerExecutionResults:
         return self.factory.get_dummy_profile()
     
-    def test_hetero_node_spec(self, random: bool=False):
-        node_spec = self.factory.get_dummy_hetero_node_spec(random=random)
+    def test_hetero_node_spec(self, random: bool=False, num_nodes: int=5): # num_nodes will not work if not random
+        node_spec = self.factory.get_dummy_hetero_node_spec(random=random, num_nodes=num_nodes)
 
+        print(node_spec)
         assert node_spec.size() > 0
         assert len(node_spec.get()) > 0
-        assert node_spec.size() == len(node_spec.get())
+        if (random):
+            assert node_spec.size() == num_nodes
+        else:
+            assert node_spec.size() == 5
+        num_gen_nodes: int = 0
         for node_config in node_spec.get():
+            num_gen_nodes += node_config._num_nodes
             assert node_config._num_gpus > 0
             assert node_config._num_nodes > 0
-        print(node_spec)
+        assert num_gen_nodes == num_nodes
+        
     
-    def test_hetero_node_spec_random(self):
-        return self.test_hetero_node_spec(random=True)
+    # def test_hetero_node_spec_random(self, num_nodes: int=5):
+    #     return self.test_hetero_node_spec(random=True, num_nodes=num_nodes)
     
     def test_create_hetero_pipeline_templates(self):
         generator = PipelineTemplateGenerator()
