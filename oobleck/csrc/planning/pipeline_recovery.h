@@ -13,12 +13,16 @@ protected:
   const int num_mbatches_;
   CacheMap *dc_cache_ = nullptr;
 
+  // update dc_cache for homogenous pipeline template
   void update_homo_dc_cache(const std::vector<std::shared_ptr<StageExecutionResult>> &stages);
 
+  // update dc_cache after assigning a stage
   void update_dc_cache(
       int idx, const std::vector<std::shared_ptr<StageExecutionResult>> &stages,
       HeteroNodeSpec &left, HeteroNodeSpec &right);
 
+  // Try to assign stages[idx] with a specific node type with assigned_device number of device
+  // Return you the Execution Result with such assignment
   std::shared_ptr<oobleck::DCExecutionResult>
   try_assign(int idx, int node_type, int assigned_device,
              std::shared_ptr<LayerExecutionResults> profile,
