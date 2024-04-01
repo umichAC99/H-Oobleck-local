@@ -23,6 +23,7 @@ class NodeConfig:
     _compute_power: float
     
 class HeteroNodeSpec:
+    def __init__(self, hetero_spec: list[NodeConfig]): ...
     def get(self) -> list[NodeConfig]: ...
     def at(self, index: int) -> NodeConfig: ...
     def size(self) -> int: ...
@@ -45,7 +46,7 @@ class StageExecutionResult:
     _mem_required: int
 
 def get_profile_results(
-    model_name: str, model_tag: str, microbatch_size: int, node_type = "": str
+    model_name: str, model_tag: str, microbatch_size: int, node_type: str=""
 ) -> LayerExecutionResults: ...
 
 def get_hetero_profile_results(
@@ -68,7 +69,7 @@ class PipelineTemplate:
     _iteration_time: float
     def get_rank_grid(self, ranks: list[int]) -> dict[int, list[int]]: ...
     
-class HeteroPipelineTemplate
+class HeteroPipelineTemplate:
     def __init__(
         self,
         stages: list[StageExecutionResult],

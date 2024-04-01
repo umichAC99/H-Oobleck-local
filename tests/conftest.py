@@ -182,17 +182,57 @@ class OobleckStaticClassFactory:
 
         return results
     
-    def get_dummy_hetero_node_spec(self) -> HeteroNodeSpec:
+    def get_dummy_hetero_node_spec(self, is_random: bool=False, seed: int=0, num_nodes: int=5, num_types: int=3) -> HeteroNodeSpec:
+        hetero_spec = None
 
-        return HeteroNodeSpec(
+        # can add more specs in the pool
+        # navie reference (not considering mem, bandwidth):
+        # https://lambdalabs.com/gpu-benchmarks
+        spec_pool : dict[str, float] = {
+            "gtx_1080ti": 0.6, # approx.
+            "v_100_16gb": 1.0,
+            "rtx_3090_24gb": 1.8,
+            "rtx_4090_24gb": 2.94,
+            "a_100_80gb_pcie": 4.41,
+            "h_100_80gb_pcie": 5.45,
+        }
+        assert num_nodes > 0, "Must have at least 1 node"
+        assert num_types <= len(list(spec_pool.keys())), "Cannot choose more types than we have"
+
+        if is_random:
+            random.seed(seed)
+            # Randomly select device types from the spec pool
+            chosed_type = random.sample(list(spec_pool.keys()), num_types)
+            computer_power = [spec_pool[i] for i in chosed_type]
+
+            num_hetero_nodes = [0]
+            for _ in range(len(chosed_type)-1):
+                num_hetero_nodes.append(random.randint(1, (num_nodes-1) - sum(num_hetero_nodes)))
+            num_hetero_nodes.append(num_nodes - sum(num_hetero_nodes))
+            num_hetero_nodes = num_hetero_nodes[1:]
+            random.shuffle(num_hetero_nodes)
+
+            assert sum(num_hetero_nodes) == num_nodes
+            
+            num_device_per_node = []
+            # Randomly select the number of devices per node from [1, 2, 4, 8]
+            for _ in range(len(num_hetero_nodes)):
+                num_device_per_node.append(random.choice([1, 2, 4, 8]))
+        else:
+            chosed_type = ["gtx_1080ti", "v_100_16gb", "rtx_4090_24gb"]
+            num_hetero_nodes = [1, 2, 2]
+            num_device_per_node = [2, 2, 2]
+            computer_power = [spec_pool[i] for i in chosed_type]
+
+        assert len(num_device_per_node) == len(num_hetero_nodes) == len(chosed_type) == len(computer_power)
+        hetero_spec = HeteroNodeSpec(
             [
-                NodeConfig("A100", 1, 4, 1.0),
-                NodeConfig("H100", 1, 4, 2.0),
-                NodeConfig("B100", 1, 4, 4.0)
+                NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
             ]
         )
-        
-    def get_dummy_profile_by_scaling(self, node_spec: HeteroNodeSpec) -> list[LayerExecutionResults]:
+        return hetero_spec
+      
+     def get_dummy_profile_by_scaling(self, node_spec: HeteroNodeSpec) -> list[LayerExecutionResults]:
         #Assume node_spec[0] is the weakest one
         result = []
         weakest_layer_results = self.get_dummy_profile().get()
@@ -221,7 +261,6 @@ class OobleckStaticClassFactory:
                 )
             result.append(LayerExecutionResults(layer_results))
         return result
-        
 
     def get_dummy_pipeline_template(
         self,

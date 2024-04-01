@@ -1,16 +1,33 @@
-FROM nvidia/cuda:11.7.1-devel-ubuntu22.04
+FROM nvidia/cuda:12.1.0-devel-ubuntu22.04
 
-COPY ./environment.yml /
+WORKDIR /workspace
+ENV PYTHONPATH=/workspace
 
-WORKDIR /
+COPY ./environment.yml /workspace/
 
 RUN apt update -y && apt install wget git -y && apt clean
 
-RUN wget -q https://repo.anaconda.com/archive/Anaconda3-2023.03-1-Linux-x86_64.sh -O ./anaconda.sh && \
-    /bin/bash ./anaconda.sh -b -p /opt/conda && \
-    rm ./anaconda.sh && \
-    /opt/conda/bin/conda init bash && \
-    /opt/conda/bin/conda env create -f environment.yml && \
-    /opt/conda/bin/conda clean -afy && \
-    echo "conda activate oobleck" >> ~/.bashrc && \
-    rm ./environment.yml
+RUN mkdir -p /opt/miniconda3
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-py311_24.1.2-0-Linux-x86_64.sh -O /opt/miniconda3/miniconda.sh
+RUN bash /opt/miniconda3/miniconda.sh -b -u -p /opt/miniconda3
+RUN rm -rf /opt/miniconda3/miniconda.sh
+
+RUN /opt/miniconda3/bin/conda env create -f environment.yml
+RUN /opt/miniconda3/bin/conda clean -afy
+
+RUN rm ./environment.yml
+
+RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/v1.1.5/zsh-in-docker.sh)" -- \
+    -t https://github.com/denysdovhan/spaceship-prompt \
+    -p git \
+    -p https://github.com/zsh-users/zsh-autosuggestions
+
+
+RUN /opt/miniconda3/bin/conda init bash
+RUN /opt/miniconda3/bin/conda init zsh
+
+RUN echo "conda activate oobleck" >> ~/.zshrc
+RUN echo "conda activate oobleck" >> ~/.bashrc
+
+RUN chsh -s /bin/zsh root
+CMD [ "/bin/zsh" ]

@@ -106,6 +106,9 @@ PYBIND11_MODULE(pipeline_template, m) {
 
   py::class_<HeteroNodeSpec>(m, "HeteroNodeSpec")
       .def(py::init<const std::vector<NodeConfig> &>())
+      .def("get", &HeteroNodeSpec::get)
+      .def("size", &HeteroNodeSpec::size)
+      .def("at", &HeteroNodeSpec::at, py::arg("index"))
       .def_readonly("_node_specs", &HeteroNodeSpec::node_specs)
       .def("__repr__", [](const HeteroNodeSpec &hns) {
         std::string repr = "<oobleck.HeteroNodeSpec.[";
