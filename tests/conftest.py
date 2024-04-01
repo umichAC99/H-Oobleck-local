@@ -204,26 +204,18 @@ class OobleckStaticClassFactory:
             # Randomly select the number of devices per node from [1, 2, 4, 8]
             for _ in range(len(num_hetero_nodes)):
                 num_device_per_node.append(random.choice([1, 2, 4, 8]))
-            
-            assert len(num_device_per_node) == len(num_hetero_nodes) == len(chosed_type) == len(computer_power)
-
-            hetero_spec = HeteroNodeSpec(
-                [
-                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
-                ]
-            )
-
         else:
             chosed_type = ["gtx_1080ti", "v_100_16gb", "rtx_4090_24gb"]
             num_hetero_nodes = [1, 2, 2]
             num_device_per_node = [2, 2, 2]
             computer_power = [spec_pool[i] for i in chosed_type]
 
-            hetero_spec = HeteroNodeSpec(
-                [
-                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
-                ]
-            )
+        assert len(num_device_per_node) == len(num_hetero_nodes) == len(chosed_type) == len(computer_power)
+        hetero_spec = HeteroNodeSpec(
+            [
+                NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
+            ]
+        )
         return hetero_spec
 
     def get_dummy_pipeline_template(
