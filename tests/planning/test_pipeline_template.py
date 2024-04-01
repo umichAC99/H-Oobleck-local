@@ -57,7 +57,7 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         # compare(plan, pipeline_template)
         
     def test_hetero_node_spec(self, random: bool=False, num_nodes: int=5): # num_nodes will not work if not random
-        node_spec = self.factory.get_dummy_hetero_node_spec(is_random=random, num_nodes=num_nodes)
+        node_spec = self.factory.get_hetero_node_spec(is_random=random, num_nodes=num_nodes)
 
         print(node_spec)
         assert node_spec.size() > 0

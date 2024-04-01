@@ -182,7 +182,17 @@ class OobleckStaticClassFactory:
 
         return results
     
-    def get_dummy_hetero_node_spec(self, is_random: bool=False, seed: int=0, num_nodes: int=5, num_types: int=3) -> HeteroNodeSpec:
+    def get_dummy_hetero_node_spec(self) -> HeteroNodeSpec:
+
+        return HeteroNodeSpec(
+            [
+                NodeConfig("A100", 1, 4, 1.0),
+                NodeConfig("H100", 1, 4, 2.0),
+                NodeConfig("B100", 1, 4, 4.0)
+            ]
+        )
+    
+    def get_hetero_node_spec(self, is_random: bool=False, seed: int=0, num_nodes: int=5, num_types: int=3) -> HeteroNodeSpec:
         hetero_spec = None
 
         # can add more specs in the pool
@@ -232,7 +242,7 @@ class OobleckStaticClassFactory:
         )
         return hetero_spec
       
-     def get_dummy_profile_by_scaling(self, node_spec: HeteroNodeSpec) -> list[LayerExecutionResults]:
+    def get_dummy_profile_by_scaling(self, node_spec: HeteroNodeSpec) -> list[LayerExecutionResults]:
         #Assume node_spec[0] is the weakest one
         result = []
         weakest_layer_results = self.get_dummy_profile().get()
