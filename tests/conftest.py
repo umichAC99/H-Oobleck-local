@@ -169,7 +169,7 @@ class OobleckStaticClassFactory:
 
         return results
     
-    def get_dummy_hetero_node_spec(self, is_random: bool=False, seed: int=0, num_nodes: int=5) -> HeteroNodeSpec:
+    def get_dummy_hetero_node_spec(self, is_random: bool=False, seed: int=0, num_nodes: int=5, num_types: int=3) -> HeteroNodeSpec:
         hetero_spec = None
 
         # can add more specs in the pool
@@ -184,11 +184,12 @@ class OobleckStaticClassFactory:
             "h_100_80gb_pcie": 5.45,
         }
         assert num_nodes > 0, "Must have at least 1 node"
+        assert num_types <= len(list(spec_pool.keys())), "Cannot choose more types than we have"
 
         if is_random:
             random.seed(seed)
             # Randomly select device types from the spec pool
-            chosed_type = random.sample(list(spec_pool.keys()), 3)
+            chosed_type = random.sample(list(spec_pool.keys()), num_types)
             computer_power = [spec_pool[i] for i in chosed_type]
 
             num_hetero_nodes = [0]
