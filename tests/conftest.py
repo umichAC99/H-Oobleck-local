@@ -169,16 +169,58 @@ class OobleckStaticClassFactory:
 
         return results
     
-    def get_dummy_hetero_node_spec(self, random: bool=False, seed: int=0) -> HeteroNodeSpec:
+    def get_dummy_hetero_node_spec(self, is_random: bool=False, seed: int=0, num_nodes: int=5) -> HeteroNodeSpec:
         hetero_spec = None
-        if random:
-            pass
-        else:
+
+        # can add more specs in the pool
+        # navie reference (not considering mem, bandwidth):
+        # https://lambdalabs.com/gpu-benchmarks
+        spec_pool : dict[str, float] = {
+            "gtx_1080ti": 0.6, # approx.
+            "v_100_16gb": 1.0,
+            "rtx_3090_24gb": 1.8,
+            "rtx_4090_24gb": 2.94,
+            "a_100_80gb_pcie": 4.41,
+            "h_100_80gb_pcie": 5.45,
+        }
+        assert num_nodes > 0, "Must have at least 1 node"
+
+        if is_random:
+            random.seed(seed)
+            # Randomly select device types from the spec pool
+            chosed_type = random.sample(list(spec_pool.keys()), 3)
+            computer_power = [spec_pool[i] for i in chosed_type]
+
+            num_hetero_nodes = [0]
+            for _ in range(len(chosed_type)-1):
+                num_hetero_nodes.append(random.randint(1, (num_nodes-1) - sum(num_hetero_nodes)))
+            num_hetero_nodes.append(num_nodes - sum(num_hetero_nodes))
+            num_hetero_nodes = num_hetero_nodes[1:]
+
+            assert sum(num_hetero_nodes) == num_nodes
+            
+            num_device_per_node = []
+            # Randomly select the number of devices per node from [1, 2, 4, 8]
+            for _ in range(len(num_hetero_nodes)):
+                num_device_per_node.append(random.choice([1, 2, 4, 8]))
+            
+            assert len(num_device_per_node) == len(num_hetero_nodes) == len(chosed_type) == len(computer_power)
+
             hetero_spec = HeteroNodeSpec(
                 [
-                    NodeConfig("A100", 1, 2, 1.0),
-                    NodeConfig("V100", 2, 2, 0.8),
-                    NodeConfig("B100", 2, 2, 1.2)
+                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
+                ]
+            )
+
+        else:
+            chosed_type = ["gtx_1080ti", "v_100_16gb", "rtx_4090_24gb"]
+            num_hetero_nodes = [1, 2, 2]
+            num_device_per_node = [2, 2, 2]
+            computer_power = [spec_pool[i] for i in chosed_type]
+
+            hetero_spec = HeteroNodeSpec(
+                [
+                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
                 ]
             )
         return hetero_spec
