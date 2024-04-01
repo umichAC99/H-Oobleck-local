@@ -137,16 +137,16 @@ PipelineTemplateGenerator::create_pipeline_templates(
     }
 
     auto optimal_result = [&]() -> std::shared_ptr<DCExecutionResult> {
-      std::shared_ptr<DCExecutionResult> result(nullptr);
-      for (int i = 0; i < results.size(); i++) {
-        if (result == nullptr) {
-          result = results[i];
-        } else if (results[i] != nullptr &&
-                   results[i]->get_t() < result->get_t()) {
-          result = results[i];
-        }
-      }
-      return result;
+      // std::shared_ptr<DCExecutionResult> result(nullptr);
+      // for (int i = 0; i < results.size(); i++) {
+      //   if (result == nullptr) {
+      //     result = results[i];
+      //   } else if (results[i] != nullptr &&
+      //              results[i]->get_t() < result->get_t()) {
+      //     result = results[i];
+      //   }
+      // }
+      return results[4];
     }();
 
     assert(optimal_result != nullptr &&
@@ -263,118 +263,120 @@ PipelineTemplateGenerator::divide_and_conquer(
   // Divide phase
   for (int k : std::ranges::iota_view<int, int>(start_layer_index + 1,
                                                 end_layer_index)) {
-    // if (num_nodes == 1) {
-    //   // Split GPUs in a node
-    //   for (int num_gpus_left :
-    //        std::ranges::iota_view<int, int>(1, num_gpus_per_node)) {
-    //     if (num_gpus_left != num_gpus_per_node - num_gpus_left) {
-    //       continue;
-    //     }
-
-    //     for (int num_stages_left :
-    //          std::ranges::iota_view<int, int>(1, num_stages)) {
-    //       std::shared_ptr<DCExecutionResult> result_left(nullptr);
-    //       std::shared_ptr<DCExecutionResult> result_right(nullptr);
-
-    //       auto key_left =
-    //           std::make_tuple(num_stages_left, start_layer_index, k,
-    //                           DCExecutionResult::get_device_indices_key(
-    //                               num_nodes, num_gpus_left, 0));
-
-    //       auto it = dc_cache_.find(key_left);
-    //       if (it != dc_cache_.end()) {
-    //         result_left = it->second;
-    //       } else {
-    //         result_left = co_await divide_and_conquer(
-    //             layer_execution_results, std::make_tuple(start_layer_index,
-    //             k), num_stages_left, num_nodes, num_gpus_left, num_mbatches);
-    //       }
-
-    //       auto key_right = std::make_tuple(
-    //           num_stages - num_stages_left, k, end_layer_index,
-    //           DCExecutionResult::get_device_indices_key(
-    //               num_nodes, num_gpus_per_node - num_gpus_left, 0));
-
-    //       it = dc_cache_.find(key_right);
-    //       if (it != dc_cache_.end()) {
-    //         result_right = it->second;
-    //       } else {
-    //         result_right = co_await divide_and_conquer(
-    //             layer_execution_results, std::make_tuple(k, end_layer_index),
-    //             num_stages - num_stages_left, num_nodes,
-    //             num_gpus_per_node - num_gpus_left, num_mbatches);
-    //       }
-
-    //       if (result_left == nullptr || result_right == nullptr) {
-    //         continue;
-    //       }
-
-    //       auto new_result = std::make_shared<DCExecutionResult>(
-    //           result_left, result_right, num_mbatches);
-    //       if (result == nullptr || new_result->get_t() < result->get_t()) {
-    //         result = new_result;
-    //       }
-    //     }
-    //   }
-    // } else {
-    // Split nodes
-    for (int num_nodes_left : std::ranges::iota_view<int, int>(1, num_nodes)) {
-      for (int num_stages_left :
-           std::ranges::iota_view<int, int>(1, num_stages)) {
-        std::shared_ptr<DCExecutionResult> result_left(nullptr);
-        std::shared_ptr<DCExecutionResult> result_right(nullptr);
-
-        auto key_left =
-            std::make_tuple(num_stages_left, start_layer_index, k,
-                            DCExecutionResult::get_device_indices_key(
-                                num_nodes_left, num_gpus_per_node, 0));
-
-        auto it = dc_cache_.find(key_left);
-        if (it != dc_cache_.end()) {
-          // std::cout << "found left" << std::endl;
-          // std::cout << "key left: " << std::get<0>(key_left) << " " <<
-          // std::get<1>(key_left) << " "
-          // << std::get<2>(key_left) << " " << std::get<3>(key_left) <<
-          // std::endl;
-          result_left = it->second;
-        } else {
-          result_left = co_await divide_and_conquer(
-              layer_execution_results, std::make_tuple(start_layer_index, k),
-              num_stages_left, num_nodes_left, num_gpus_per_node, num_mbatches);
-        }
-
-        auto key_right = std::make_tuple(
-            num_stages - num_stages_left, k, end_layer_index,
-            DCExecutionResult::get_device_indices_key(
-                num_nodes - num_nodes_left, num_gpus_per_node, 0));
-
-        it = dc_cache_.find(key_right);
-        if (it != dc_cache_.end()) {
-          result_right = it->second;
-          // std::cout << "found right" << std::endl;
-          // std::cout << "key right: " << std::get<0>(key_right) << " " <<
-          // std::get<1>(key_right) << " "
-          // << std::get<2>(key_right) << " " << std::get<3>(key_right) <<
-          // std::endl;
-
-        } else {
-          result_right = co_await divide_and_conquer(
-              layer_execution_results, std::make_tuple(k, end_layer_index),
-              num_stages - num_stages_left, num_nodes - num_nodes_left,
-              num_gpus_per_node, num_mbatches);
-        }
-
-        if (result_left == nullptr || result_right == nullptr) {
+    if (num_nodes == 1) {
+      // Split GPUs in a node
+      for (int num_gpus_left :
+           std::ranges::iota_view<int, int>(1, num_gpus_per_node)) {
+        if (num_gpus_left != num_gpus_per_node - num_gpus_left) {
           continue;
         }
 
-        auto new_result = std::make_shared<DCExecutionResult>(
-            result_left, result_right, num_mbatches);
-        if (result == nullptr || new_result->get_t() < result->get_t()) {
-          result = new_result;
+        for (int num_stages_left :
+             std::ranges::iota_view<int, int>(1, num_stages)) {
+          std::shared_ptr<DCExecutionResult> result_left(nullptr);
+          std::shared_ptr<DCExecutionResult> result_right(nullptr);
+
+          auto key_left =
+              std::make_tuple(num_stages_left, start_layer_index, k,
+                              DCExecutionResult::get_device_indices_key(
+                                  num_nodes, num_gpus_left, 0));
+
+          auto it = dc_cache_.find(key_left);
+          if (it != dc_cache_.end()) {
+            result_left = it->second;
+          } else {
+            result_left = co_await divide_and_conquer(
+                layer_execution_results, std::make_tuple(start_layer_index, k),
+                num_stages_left, num_nodes, num_gpus_left, num_mbatches);
+          }
+
+          auto key_right = std::make_tuple(
+              num_stages - num_stages_left, k, end_layer_index,
+              DCExecutionResult::get_device_indices_key(
+                  num_nodes, num_gpus_per_node - num_gpus_left, 0));
+
+          it = dc_cache_.find(key_right);
+          if (it != dc_cache_.end()) {
+            result_right = it->second;
+          } else {
+            result_right = co_await divide_and_conquer(
+                layer_execution_results, std::make_tuple(k, end_layer_index),
+                num_stages - num_stages_left, num_nodes,
+                num_gpus_per_node - num_gpus_left, num_mbatches);
+          }
+
+          if (result_left == nullptr || result_right == nullptr) {
+            continue;
+          }
+
+          auto new_result = std::make_shared<DCExecutionResult>(
+              result_left, result_right, num_mbatches);
+          if (result == nullptr || new_result->get_t() < result->get_t()) {
+            result = new_result;
+          }
         }
       }
-      //  }
+    } else {
+      // Split nodes
+      for (int num_nodes_left :
+           std::ranges::iota_view<int, int>(1, num_nodes)) {
+        for (int num_stages_left :
+             std::ranges::iota_view<int, int>(1, num_stages)) {
+          std::shared_ptr<DCExecutionResult> result_left(nullptr);
+          std::shared_ptr<DCExecutionResult> result_right(nullptr);
+
+          auto key_left =
+              std::make_tuple(num_stages_left, start_layer_index, k,
+                              DCExecutionResult::get_device_indices_key(
+                                  num_nodes_left, num_gpus_per_node, 0));
+
+          auto it = dc_cache_.find(key_left);
+          if (it != dc_cache_.end()) {
+            // std::cout << "found left" << std::endl;
+            // std::cout << "key left: " << std::get<0>(key_left) << " " <<
+            // std::get<1>(key_left) << " "
+            // << std::get<2>(key_left) << " " << std::get<3>(key_left) <<
+            // std::endl;
+            result_left = it->second;
+          } else {
+            result_left = co_await divide_and_conquer(
+                layer_execution_results, std::make_tuple(start_layer_index, k),
+                num_stages_left, num_nodes_left, num_gpus_per_node,
+                num_mbatches);
+          }
+
+          auto key_right = std::make_tuple(
+              num_stages - num_stages_left, k, end_layer_index,
+              DCExecutionResult::get_device_indices_key(
+                  num_nodes - num_nodes_left, num_gpus_per_node, 0));
+
+          it = dc_cache_.find(key_right);
+          if (it != dc_cache_.end()) {
+            result_right = it->second;
+            // std::cout << "found right" << std::endl;
+            // std::cout << "key right: " << std::get<0>(key_right) << " " <<
+            // std::get<1>(key_right) << " "
+            // << std::get<2>(key_right) << " " << std::get<3>(key_right) <<
+            // std::endl;
+
+          } else {
+            result_right = co_await divide_and_conquer(
+                layer_execution_results, std::make_tuple(k, end_layer_index),
+                num_stages - num_stages_left, num_nodes - num_nodes_left,
+                num_gpus_per_node, num_mbatches);
+          }
+
+          if (result_left == nullptr || result_right == nullptr) {
+            continue;
+          }
+
+          auto new_result = std::make_shared<DCExecutionResult>(
+              result_left, result_right, num_mbatches);
+          if (result == nullptr || new_result->get_t() < result->get_t()) {
+            result = new_result;
+          }
+        }
+      }
     }
   }
 

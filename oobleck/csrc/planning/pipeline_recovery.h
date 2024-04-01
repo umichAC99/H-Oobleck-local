@@ -13,6 +13,8 @@ protected:
   const int num_mbatches_;
   CacheMap *dc_cache_ = nullptr;
 
+  void update_homo_dc_cache(const std::vector<std::shared_ptr<StageExecutionResult>> &stages);
+
   void update_dc_cache(
       int idx, const std::vector<std::shared_ptr<StageExecutionResult>> &stages,
       HeteroNodeSpec &left, HeteroNodeSpec &right);

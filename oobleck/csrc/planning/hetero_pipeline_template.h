@@ -185,9 +185,9 @@ public:
     repr += "t3: " + std::to_string(get_t3()) + ", ";
     repr += "kstar_latency: " + std::to_string(get_kstar_latency()) + ", ";
     repr += "num_mbatches: " + std::to_string(get_num_mbatches()) + ", ";
-    repr += "stages: [";
+    repr += "stages: [" + '\n';
     for (const auto &stage : get_stages()) {
-      repr += stage->to_string() + ", ";
+      repr += stage->to_string() + ", " + '\n';
     }
     repr.pop_back();
     repr.pop_back();

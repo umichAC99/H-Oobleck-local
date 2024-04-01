@@ -48,14 +48,8 @@ namespace oobleck {
 static DCExecutionResult::key get_dc_key(int num_stages, int start_layer_idx,
                                          int end_layer_idx,
                                          const HeteroNodeSpec &spec) {
-  bool is_homo = spec.num_total_gpus == spec.node_specs[0].num_total_gpus;
   std::string device_key;
-  if (is_homo) {
-    device_key = DCExecutionResult::get_device_indices_key(
-        spec.node_specs[0].num_nodes, spec.node_specs[0].num_gpus, 0);
-  } else {
-    device_key = spec.get_cache_key_recovery();
-  }
+  device_key = spec.get_cache_key_recovery();
   return std::make_tuple(num_stages, start_layer_idx, end_layer_idx,
                          device_key);
 }
@@ -132,6 +126,39 @@ static std::string get_cache_key_recovery_merge(
   return result;
 }
 
+void BasePipelineRecoverSolver::update_homo_dc_cache(
+    const std::vector<std::shared_ptr<StageExecutionResult>> &stages) {
+  int total_gpu_nums = 0;
+  int end_layer_idx;
+  for (int i = 0; i < stages.size(); i++) {
+    total_gpu_nums = stages[i]->num_gpus_;
+    assert(stages[i]->node_type_idx_ == 0 &&
+           "It's not a homogenous pipeline template");
+    int curr_total_gpu_nums = total_gpu_nums;
+    int start_layer_idx = stages[i]->get_start_layer_index();
+    auto current_result = std::make_shared<DCExecutionResult>(stages[i]);
+    for (int j = i + 1; j < stages.size(); j++) {
+      assert(stages[j]->node_type_idx_ == 0 &&
+             "It's not a homogenous pipeline template");
+      end_layer_idx = stages[j]->get_end_layer_index() + 1;
+      curr_total_gpu_nums += stages[j]->num_gpus_;
+      current_result = std::make_shared<DCExecutionResult>(
+          current_result, std::make_shared<DCExecutionResult>(stages[j]),
+          num_mbatches_);
+      DCExecutionResult::key key = std::make_tuple(
+          j - i + 1, start_layer_idx, end_layer_idx,
+          DCExecutionResult::get_device_indices_key(curr_total_gpu_nums, 0));
+      // if cannot find the key-val, insert it into cache
+      auto it = dc_cache_->find(key);
+      if (it == dc_cache_->end()) {
+        dc_cache_->insert({key, current_result});
+      } else if (it->second->get_t() > current_result->get_t()) {
+        it->second = current_result;
+      }
+    } // for
+  }
+}
+
 // update dc cache needed for next iteration
 void BasePipelineRecoverSolver::update_dc_cache(
     int idx, const std::vector<std::shared_ptr<StageExecutionResult>> &stages,
@@ -150,8 +177,8 @@ void BasePipelineRecoverSolver::update_dc_cache(
         1, current_stage->get_start_layer_index(),
         current_stage->get_end_layer_index() + 1,
         get_cache_key_recovery_merge(left_spec, right_spec, current_stage));
-    PRINT("Current Key: " + DCExecutionResult::key_to_string(dc_cache_key) +
-          " to result " + current_result->to_string());
+    // PRINT("Current Key: " + DCExecutionResult::key_to_string(dc_cache_key) +
+    //       " to result " + current_result->to_string());
     auto it = dc_cache_->find(dc_cache_key);
     assert(it == dc_cache_->end() && "DCExecutionResult already in cache");
     dc_cache_->insert({dc_cache_key, current_result});
@@ -168,8 +195,8 @@ void BasePipelineRecoverSolver::update_dc_cache(
   }
 
   auto initialized_right_spec = right_spec;
-  PRINT("Left Spec: " + left_spec.to_string());
-  PRINT("Right Spec: " + right_spec.to_string());
+  // PRINT("Left Spec: " + left_spec.to_string());
+  // PRINT("Right Spec: " + right_spec.to_string());
 
   int i = 0;
   while (i <= idx) {
@@ -181,7 +208,7 @@ void BasePipelineRecoverSolver::update_dc_cache(
       auto key =
           get_dc_key(idx - i, stages[i]->get_start_layer_index(),
                      stages[idx - 1]->get_end_layer_index() + 1, left_spec);
-      PRINT("Key1: " + DCExecutionResult::key_to_string(key));
+      // PRINT("Key1: " + DCExecutionResult::key_to_string(key));
       auto it = dc_cache_->find(key);
       if (it != dc_cache_->end()) {
         left_result = it->second;
@@ -195,7 +222,7 @@ void BasePipelineRecoverSolver::update_dc_cache(
     for (int j = stages.size() - 1; j > idx; j--) {
       auto key = get_dc_key(j - idx, stages[idx + 1]->get_start_layer_index(),
                             stages[j]->get_end_layer_index() + 1, right_spec);
-      PRINT("Key2: " + DCExecutionResult::key_to_string(key));
+      // PRINT("Key2: " + DCExecutionResult::key_to_string(key));
       auto it = dc_cache_->find(key);
       if (it != dc_cache_->end()) {
         right_result = it->second;
@@ -209,6 +236,10 @@ void BasePipelineRecoverSolver::update_dc_cache(
           num_stages, stages[i]->get_start_layer_index(),
           stages[j]->get_end_layer_index() + 1,
           get_cache_key_recovery_merge(left_spec, right_spec, stages[idx]));
+      // PRINT("left spec: " + left_spec.to_string());
+      // PRINT("right spec: " + right_spec.to_string());
+      // PRINT("Inserting Key: " +
+      // DCExecutionResult::key_to_string(dc_cache_key));
       if (left_result != nullptr) {
         result_to_cache = std::make_shared<DCExecutionResult>(
             std::make_shared<DCExecutionResult>(left_result, current_result,
@@ -337,10 +368,14 @@ HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve(
         &layer_execution_results) {
 
   assert(dc_cache_ != nullptr && "DC Cache is not set");
-  assert(pipeline_template_.get_num_layers() == layer_execution_results[0]->size() &&
+  assert(pipeline_template_.get_num_layers() ==
+             layer_execution_results[0]->size() &&
          "Layer Execution Results size is not equal to pipeline template size");
   auto curr_stages = pipeline_template_.get_stages();
   HeteroNodeSpec curr_spec, left_spec, right_spec;
+
+  // update dc cache for current stage
+  update_homo_dc_cache(curr_stages);
 
   // initialize curr_spec to be homogenous cluster
   curr_spec.node_specs = hetero_node_spec_.node_specs;
@@ -368,6 +403,8 @@ HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve(
 
   // start greedy algorithm
   std::shared_ptr<oobleck::DCExecutionResult> min_cost_dc_result = nullptr;
+  std::vector<std::shared_ptr<oobleck::DCExecutionResult>>
+      min_cost_dc_result_records;
   for (int i = hetero_node_spec_.node_specs.size() - 1; i > 0; i--) {
     int used_device = 0;
     int total_device = hetero_node_spec_.node_specs[i].num_nodes *
@@ -410,7 +447,7 @@ HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve(
         //       + left_spec.to_string() + " " + right_spec.to_string());
 
         // only try assign if current stage is assigned to the weakest node
-        if (curr_stage_node_idx == 0) {
+        if (curr_stage_node_idx == 0 && assigned_device_f > 0.8f) {
           auto dc_result =
               try_assign(j, i, assigned_device, layer_execution_results[i],
                          curr_stages, left_spec, right_spec);
@@ -456,14 +493,15 @@ HeteroPipelineTemplate GreedyPipelineRecoverSolver::solve(
       // update dc cache with current result
       assert(min_time_assigned_device != -1 && "Assigned device is not set");
       update_dc_cache(min_idx, curr_stages, left_spec, right_spec);
+      min_cost_dc_result_records.push_back(min_cost_dc_result);
       used_device += min_time_assigned_device;
     } // while
   }
 
   return HeteroPipelineTemplate(
-    curr_stages, min_cost_dc_result->get_t1(), min_cost_dc_result->get_t2(),
-    min_cost_dc_result->get_t3(), min_cost_dc_result->get_kstar_latency(),
-    min_cost_dc_result->get_t(),
-    num_mbatches_, layer_execution_results[0]->size(), hetero_node_spec_);
+      curr_stages, min_cost_dc_result->get_t1(), min_cost_dc_result->get_t2(),
+      min_cost_dc_result->get_t3(), min_cost_dc_result->get_kstar_latency(),
+      min_cost_dc_result->get_t(), num_mbatches_,
+      layer_execution_results[0]->size(), hetero_node_spec_);
 }
 } // namespace oobleck
