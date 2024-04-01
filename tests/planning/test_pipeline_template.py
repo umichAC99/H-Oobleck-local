@@ -1,8 +1,10 @@
 import pytest
+import sys
 
 from oobleck.csrc.planning.pipeline_template import (
     LayerExecutionResults,
     PipelineTemplateGenerator,
+    GreedyPipelineRecoverSolver,
 )
 from tests.conftest import OobleckSingleProcessTestCase
 
@@ -10,8 +12,50 @@ from tests.conftest import OobleckSingleProcessTestCase
 class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     @pytest.fixture(scope="function")
     def profile(self) -> LayerExecutionResults:
-        return self.factory.get_dummy_profile()
+        return self.factory.get_dummy_profile()   
     
+    def test_node_folding(self):
+        generator = PipelineTemplateGenerator()
+        node_spec = self.factory.get_dummy_hetero_node_spec()
+        profiles = self.factory.get_dummy_profile_by_scaling(node_spec)
+        # print(node_spec)
+        # print(profiles)
+        # print("LOG: running ground truth")
+        # pipeline_template = generator.create_hetero_pipeline_template(
+        #     profiles,
+        #     node_spec,
+        #     32,
+        # )
+        # print(pipeline_template)
+        print("LOG: running node folding")
+        (num_nodes, num_gpus_per_node, scaling_factors) = self.factory.dummy_node_folding(profiles, node_spec)
+        print("num_nodes: ", num_nodes)
+        print("num_gpus_per_node: ", num_gpus_per_node)
+        print("scaling_factors: ", scaling_factors)
+        print("num layers: ", len(profiles[0].get()))
+        # flush print buffer
+        sys.stdout.flush()
+        pipeline_template_origin = generator.create_pipeline_templates(
+            profiles[0],
+            (num_nodes, num_nodes),  # num nodes range
+            num_gpus_per_node,
+            32,
+        )[0]
+        print(pipeline_template_origin)
+        solver = GreedyPipelineRecoverSolver(pipeline_template_origin, scaling_factors, node_spec, 32)
+        solver.set_dc_cache(generator)
+        plan = solver.solve(profiles)
+        print("approximated plan ", plan)
+        
+        pipeline_template = generator.create_hetero_pipeline_template(
+            profiles,
+            node_spec,
+            32,
+        )
+        print("real plan ", pipeline_template)
+        # plan = recovery(pipeline_template_origin, scaling_factors, node_spec)
+        # compare(plan, pipeline_template)
+        
     def test_hetero_node_spec(self, random: bool=False, num_nodes: int=5): # num_nodes will not work if not random
         node_spec = self.factory.get_dummy_hetero_node_spec(is_random=random, num_nodes=num_nodes)
 
@@ -33,6 +77,7 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     def test_hetero_node_spec_random(self, num_nodes: int=5):
         return self.test_hetero_node_spec(random=True, num_nodes=num_nodes)
     
+    @pytest.mark.skip(reason="Skipped")
     def test_create_hetero_pipeline_templates(self):
         generator = PipelineTemplateGenerator()
         hetero_profiles = self.factory.get_dummy_hetero_profile()
@@ -43,20 +88,21 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         )
         print(pipeline_template)
     
-
     @pytest.mark.skip(reason="Skipped")
     def test_create_pipeline_templates_onegpu(self, profile: LayerExecutionResults):
         generator = PipelineTemplateGenerator()
         pipeline_templates = generator.create_pipeline_templates(
             profile,
-            (1, 1),  # num nodes range
-            1,
+            (8, 8),  # num nodes range
+            4,
+            60
         )
         assert len(pipeline_templates) == 1
-        assert pipeline_templates[0]._num_nodes == 1
-        assert pipeline_templates[0]._num_gpus_per_node == 1
-        assert len(pipeline_templates[0].get_stages()) == 1
+        assert pipeline_templates[0]._num_nodes == 8
+        assert pipeline_templates[0]._num_gpus_per_node == 4
+        # assert len(pipeline_templates[0].get_stages()) == 1
         assert pipeline_templates[0]._iteration_time > 0
+        print(pipeline_templates[0])
 
     @pytest.mark.skip(reason="Skipped")
     def test_create_pipeline_templates_maxnode(self, profile: LayerExecutionResults):

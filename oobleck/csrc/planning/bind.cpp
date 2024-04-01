@@ -1,4 +1,5 @@
 #include "execution_result.h"
+#include "pipeline_recovery.h"
 #include "pipeline_template.h"
 #include <map>
 #include <pybind11/pybind11.h>
@@ -33,7 +34,17 @@ PYBIND11_MODULE(pipeline_template, m) {
       .def(py::init<std::vector<LayerExecutionResult> &&>())
       .def("get", &LayerExecutionResults::get)
       .def("at", &LayerExecutionResults::at, py::arg("index"))
-      .def_property_readonly("size", &LayerExecutionResults::size);
+      .def_property_readonly("size", &LayerExecutionResults::size)
+      .def("__repr__", [](const LayerExecutionResults &lers) {
+        std::string repr = "<oobleck.LayerExecutionResults.[";
+        for (const auto &ler : lers.get()) {
+          repr += ler.to_string() + "\n";
+        }
+        repr.pop_back();
+        repr.pop_back();
+        repr += "]>";
+        return repr;
+      });
 
   py::class_<StageExecutionResult, std::shared_ptr<StageExecutionResult>>(
       m, "StageExecutionResult")
@@ -62,18 +73,22 @@ PYBIND11_MODULE(pipeline_template, m) {
 
   py::class_<PipelineTemplate>(m, "PipelineTemplate")
       .def(py::init<const std::vector<std::shared_ptr<StageExecutionResult>> &,
-                    const double, const int, const int, const int>())
+                    const double, const double, const double, const double,
+                    const double, const int, const int, const int, const int>())
       .def("get_stages", &PipelineTemplate::get_stages)
       .def("get_rank_grid", &PipelineTemplate::get_rank_grid, py::arg("ranks"))
       .def_property_readonly("_iteration_time",
                              &PipelineTemplate::get_iteration_time)
+      .def_property_readonly("_t1", &PipelineTemplate::get_t1)
+      .def_property_readonly("_t2", &PipelineTemplate::get_t2)
+      .def_property_readonly("_t3", &PipelineTemplate::get_t3)
+      .def_property_readonly("_kstar_latency",
+                             &PipelineTemplate::get_kstar_latency)
       .def_property_readonly("_num_nodes", &PipelineTemplate::get_num_nodes)
       .def_property_readonly("_num_gpus_per_node",
                              &PipelineTemplate::get_num_gpus_per_node)
-      .def("__repr__", [](const PipelineTemplate &pt) {
-        return "<oobleck.PipelineTemplate." +
-               std::to_string(pt.get_num_nodes()) + "nodes>";
-      });
+      .def("__repr__",
+           [](const PipelineTemplate &pt) { return pt.to_string(); });
 
   py::class_<NodeConfig>(m, "NodeConfig")
       .def(py::init<const std::string, const int, const int, const double>(),
@@ -82,6 +97,7 @@ PYBIND11_MODULE(pipeline_template, m) {
       .def_readonly("_node_type_idx", &NodeConfig::node_type_idx)
       .def_readonly("_num_nodes", &NodeConfig::num_nodes)
       .def_readonly("_num_gpus", &NodeConfig::num_gpus)
+      .def_readonly("_compute_power", &NodeConfig::compute_power)
       .def("__repr__", [](const NodeConfig &sns) {
         return "<oobleck.NodeConfig." +
                node_specs[sns.node_type_idx].node_type + "[ " +
@@ -108,28 +124,34 @@ PYBIND11_MODULE(pipeline_template, m) {
 
   py::class_<HeteroPipelineTemplate>(m, "HeteroPipelineTemplate")
       .def(py::init<const std::vector<std::shared_ptr<StageExecutionResult>> &,
-                    const int, const HeteroNodeSpec &>())
+                    const double, const double, const double, const double,
+                    const double, const int, const int,
+                    const HeteroNodeSpec &>())
       .def("get_stages", &HeteroPipelineTemplate::get_stages)
       .def("get_node_spec", &HeteroPipelineTemplate::get_node_spec)
-      .def("__repr__", [](const HeteroPipelineTemplate &hpt) {
-        std::string repr = "<oobleck.HeteroPipelineTemplate.[";
-        repr += "stages: [";
-        for (const auto &stage : hpt.get_stages()) {
-          repr += stage->to_string() + ", ";
-        }
-        repr.pop_back();
-        repr.pop_back();
-        repr += "], ";
-        repr += "]>";
-        return repr;
-      });
+      .def_property_readonly("_iteration_time",
+                             &HeteroPipelineTemplate::get_iteration_time)
+      .def_property_readonly("_t1", &HeteroPipelineTemplate::get_t1)
+      .def_property_readonly("_t2", &HeteroPipelineTemplate::get_t2)
+      .def_property_readonly("_t3", &HeteroPipelineTemplate::get_t3)
+      .def_property_readonly("_kstar_latency",
+                             &HeteroPipelineTemplate::get_kstar_latency)
+      .def("__repr__",
+           [](const HeteroPipelineTemplate &hpt) { return hpt.to_string(); });
 
   py::class_<PipelineTemplateGenerator>(m, "PipelineTemplateGenerator")
       .def(py::init<>())
       .def("create_pipeline_templates",
            &PipelineTemplateGenerator::create_pipeline_templates)
       .def("create_hetero_pipeline_template",
-           &PipelineTemplateGenerator::create_hetero_pipeline_template);
+           &PipelineTemplateGenerator::create_hetero_pipeline_template)
+      .def("get_dc_cache", &PipelineTemplateGenerator::get_dc_cache);
+
+  py::class_<GreedyPipelineRecoverSolver>(m, "GreedyPipelineRecoverSolver")
+      .def(py::init<const PipelineTemplate &, const std::vector<float> &,
+                    const HeteroNodeSpec &, const int>())
+      .def("set_dc_cache", &GreedyPipelineRecoverSolver::set_dc_cache)
+      .def("solve", &GreedyPipelineRecoverSolver::solve);
 
   m.def("get_profile_results", &get_profile_results, py::arg("model_name"),
         py::arg("model_tag"), py::arg("microbatch_size"), py::arg("node_type"));

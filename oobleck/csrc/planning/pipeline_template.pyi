@@ -20,6 +20,7 @@ class NodeConfig:
     _node_type_idx: int
     _num_nodes: int
     _num_gpus: int
+    _compute_power: float
     
 class HeteroNodeSpec:
     def __init__(self, hetero_spec: list[NodeConfig]): ...
@@ -86,9 +87,21 @@ class PipelineTemplateGenerator:
         layer_execution_results: LayerExecutionResults,
         num_nodes: tuple[int, int],
         num_gpus_per_node: int,
+        num_mbatches: int = 0,
     ) -> list[PipelineTemplate]: ...
     def create_hetero_pipeline_template(
         self,
         layer_execution_results: list[LayerExecutionResults],
         node_spec: HeteroNodeSpec,
+        num_mbatches: int = 0,
     ) -> HeteroPipelineTemplate: ...
+    
+class GreedyPipelineRecoverSolver
+    def __init__(
+        self,
+        pipeline_template: PipelineTemplate,
+        scaling_factor: list[float],
+        node_spec: HeteroNodeSpec,
+    ): ...
+    def solve(self) -> HeteroPipelineTemplate: ...
+    def set_dc_cache(ptg: PipelineTemplateGenerator): ...

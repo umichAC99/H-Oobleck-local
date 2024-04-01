@@ -1,3 +1,4 @@
+#include "oobleck_utils.h"
 #include "pipeline_template.h"
 #include <algorithm>
 #include <cassert>
@@ -5,12 +6,12 @@
 #include <cppcoro/when_all.hpp>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <ranges>
 #include <string>
-#include <map>
 
 #ifdef PYBIND11_MODULE
 #include <pybind11/pybind11.h>
@@ -29,13 +30,35 @@ namespace oobleck {
 std::vector<SingleNodeSpec> node_specs;
 std::map<std::string, int> node_specs_map;
 
+bool is_timing_starts = false;
+std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
+
 std::string HeteroNodeSpec::get_cache_key() const {
   std::string result = "";
   for (auto &config : node_specs) {
+    if (config.num_nodes == 0) {
+      continue;
+    }
     result += DCExecutionResult::get_device_indices_key(
                   config.num_nodes, config.num_gpus, config.node_type_idx) +
               "-";
   }
+  assert(result.size() > 0 && "Cache key is empty");
+  result.pop_back();
+  return result;
+}
+
+std::string HeteroNodeSpec::get_cache_key_recovery() const {
+  std::string result = "";
+  for (auto &config : node_specs) {
+    if (config.num_nodes == 0) {
+      continue;
+    }
+    result += DCExecutionResult::get_device_indices_key(config.num_total_gpus,
+                                                        config.node_type_idx) +
+              "-";
+  }
+  assert(result.size() > 0 && "Cache key is empty");
   result.pop_back();
   return result;
 }
@@ -57,7 +80,6 @@ void generateSubsetsUtil(const HeteroNodeSpec &originalSpec,
   }
 }
 
-
 // enumerate all possible subsets of the original cluster set
 std::vector<HeteroNodeSpec> generateSubsets(const HeteroNodeSpec &heteroSpec) {
   std::vector<HeteroNodeSpec> allSubsets;
@@ -66,23 +88,6 @@ std::vector<HeteroNodeSpec> generateSubsets(const HeteroNodeSpec &heteroSpec) {
     currentSubset.node_specs[i].num_nodes = 0;
   }
   generateSubsetsUtil(heteroSpec, allSubsets, currentSubset, 0);
-
-#ifdef DEBUG
-  // Print all subsets for demonstration purposes
-  for (const auto &subset : allSubsets) {
-    std::cout << subset.to_string() << std::endl;
-  }
-  std::cout << std::endl;
-
-  std::cout << "Total number of subsets: " << allSubsets.size() << std::endl;
-
-  // Check there are no duplicates
-  for (int i = 0; i < allSubsets.size(); ++i) {
-    for (int j = i + 1; j < allSubsets.size(); ++j) {
-      assert(!(allSubsets[i].node_specs == allSubsets[j].node_specs));
-    }
-  }
-#endif
   return allSubsets;
 }
 
@@ -102,7 +107,7 @@ get_hetero_profile_results(const std::vector<std::string> &model_names,
 HeteroPipelineTemplate
 PipelineTemplateGenerator::create_hetero_pipeline_template(
     std::vector<std::shared_ptr<LayerExecutionResults>> layer_execution_results,
-    const HeteroNodeSpec &node_spec) {
+    const HeteroNodeSpec &node_spec, const int num_mbatches) {
 #ifdef PYBIND11_MODULE
   // Release GIL
   pybind11::gil_scoped_release release;
@@ -127,6 +132,7 @@ PipelineTemplateGenerator::create_hetero_pipeline_template(
 
   std::cout << "min_num_stages: " << min_num_stages << std::endl;
   std::cout << "max_num_stages: " << max_num_stages << std::endl;
+  std::cout << "num_mbatches: " << num_mbatches << std::endl;
 
   std::vector<cppcoro::task<std::shared_ptr<DCExecutionResult>>>
       num_stages_tasks;
@@ -134,7 +140,7 @@ PipelineTemplateGenerator::create_hetero_pipeline_template(
        num_stages++) {
     num_stages_tasks.emplace_back(divide_and_conquer(
         layer_execution_results, std::make_tuple(0, layer_count), num_stages,
-        node_spec));
+        node_spec, num_mbatches));
   }
 
   std::cout << "Waiting for tasks" << std::endl;
@@ -146,28 +152,52 @@ PipelineTemplateGenerator::create_hetero_pipeline_template(
             << ", miss: " << cache_miss_.load() << std::endl;
 
   if (std::all_of(results.begin(), results.end(),
-                  [](const std::shared_ptr<DCExecutionResult> &result)
-                      -> bool { return result == nullptr; })) {
+                  [](const std::shared_ptr<DCExecutionResult> &result) -> bool {
+                    return result == nullptr;
+                  })) {
     std::cout << "All results are invalid" << std::endl;
   }
 
   auto optimal_result = [&]() -> std::shared_ptr<DCExecutionResult> {
-      std::shared_ptr<DCExecutionResult> result(nullptr);
-      for (int i = 0; i < results.size(); i++) {
-        if (result == nullptr) {
-          result = results[i];
-        } else if (results[i] != nullptr &&
-                   results[i]->get_t() < result->get_t()) {
-          result = results[i];
-        }
+    std::shared_ptr<DCExecutionResult> result(nullptr);
+    for (int i = 0; i < results.size(); i++) {
+      if (result == nullptr) {
+        result = results[i];
+      } else if (results[i] != nullptr &&
+                 results[i]->get_t() < result->get_t()) {
+        result = results[i];
       }
-      return result;
-    }();
+    }
+    return result;
+  }();
 
-  assert(optimal_result != nullptr &&
-           optimal_result->get_stages().size() > 0);
-  return HeteroPipelineTemplate(optimal_result->get_stages(), layer_count,
-                                node_spec);
+#ifdef DEBUG_PIPELINE_TEMPLATE
+  std::shared_ptr<DCExecutionResult> result(nullptr);
+  std::cout << "DEBUG HETERO PIPELINE TEMPLATE: " << std::endl;
+  for (int i = 0; i < results.size(); i++) {
+    std::cout << "Result " << i << std::endl;
+    result = results[i];
+    if (result == nullptr) {
+      std::cout << "Result is null" << std::endl;
+      continue;
+    }
+    std::cout << HeteroPipelineTemplate(
+                     result->get_stages(), result->get_t1(), result->get_t2(),
+                     result->get_t3(), result->get_kstar_latency(),
+                     result->get_t(), num_mbatches, layer_count, node_spec)
+                     .to_string()
+              << std::endl;
+  }
+#endif
+
+  // print_dc_cache();
+
+  assert(optimal_result != nullptr && optimal_result->get_stages().size() > 0);
+  return HeteroPipelineTemplate(
+      optimal_result->get_stages(), optimal_result->get_t1(),
+      optimal_result->get_t2(), optimal_result->get_t3(),
+      optimal_result->get_kstar_latency(), optimal_result->get_t(),
+      num_mbatches, layer_count, node_spec);
 }
 
 cppcoro::task<std::shared_ptr<DCExecutionResult>>
@@ -175,7 +205,7 @@ PipelineTemplateGenerator::divide_and_conquer(
     const std::vector<std::shared_ptr<LayerExecutionResults>>
         &layer_execution_results,
     const std::tuple<int, int> layer_indices, const int num_stages,
-    const HeteroNodeSpec &node_spec) {
+    const HeteroNodeSpec &node_spec, const int num_mbatches) {
   co_await thread_pool_.schedule();
 
   int start_layer_index = std::get<0>(layer_indices);
@@ -276,7 +306,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           } else {
             result_left = co_await divide_and_conquer(
                 layer_execution_results, std::make_tuple(start_layer_index, k),
-                num_stages_left, node_spec_left);
+                num_stages_left, node_spec_left, num_mbatches);
           }
 
           auto node_spec_right = node_spec;
@@ -292,15 +322,15 @@ PipelineTemplateGenerator::divide_and_conquer(
           } else {
             result_right = co_await divide_and_conquer(
                 layer_execution_results, std::make_tuple(k, end_layer_index),
-                num_stages - num_stages_left, node_spec_right);
+                num_stages - num_stages_left, node_spec_right, num_mbatches);
           }
 
           if (result_left == nullptr || result_right == nullptr) {
             continue;
           }
 
-          auto new_result =
-              std::make_shared<DCExecutionResult>(result_left, result_right);
+          auto new_result = std::make_shared<DCExecutionResult>(
+              result_left, result_right, num_mbatches);
           if (result == nullptr || new_result->get_t() < result->get_t()) {
             result = new_result;
           }
@@ -314,9 +344,10 @@ PipelineTemplateGenerator::divide_and_conquer(
       for (auto &node_spec_subset_left : all_node_spec_subsets) {
         auto node_spec_subset_right = node_spec.subtract(node_spec_subset_left);
         // std::cout << "origin " << node_spec.to_string() << std::endl;
-        // std::cout << "left " << node_spec_subset_left.to_string() << std::endl;
-        // std::cout << "right " << node_spec_subset_right.to_string()
-                  // << std::endl;
+        // std::cout << "left " << node_spec_subset_left.to_string() <<
+        // std::endl; std::cout << "right " <<
+        // node_spec_subset_right.to_string()
+        // << std::endl;
         for (int num_stages_left :
              std::ranges::iota_view<int, int>(1, num_stages)) {
 
@@ -331,7 +362,7 @@ PipelineTemplateGenerator::divide_and_conquer(
           } else {
             result_left = co_await divide_and_conquer(
                 layer_execution_results, std::make_tuple(start_layer_index, k),
-                num_stages_left, node_spec_subset_left);
+                num_stages_left, node_spec_subset_left, num_mbatches);
           }
 
           auto key_right =
@@ -343,15 +374,16 @@ PipelineTemplateGenerator::divide_and_conquer(
           } else {
             result_right = co_await divide_and_conquer(
                 layer_execution_results, std::make_tuple(k, end_layer_index),
-                num_stages - num_stages_left, node_spec_subset_right);
+                num_stages - num_stages_left, node_spec_subset_right,
+                num_mbatches);
           }
 
           if (result_left == nullptr || result_right == nullptr) {
             continue;
           }
 
-          auto new_result =
-              std::make_shared<DCExecutionResult>(result_left, result_right);
+          auto new_result = std::make_shared<DCExecutionResult>(
+              result_left, result_right, num_mbatches);
           if (result == nullptr || new_result->get_t() < result->get_t()) {
             result = new_result;
           }
