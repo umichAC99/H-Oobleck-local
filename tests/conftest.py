@@ -196,6 +196,7 @@ class OobleckStaticClassFactory:
                 num_hetero_nodes.append(random.randint(1, (num_nodes-1) - sum(num_hetero_nodes)))
             num_hetero_nodes.append(num_nodes - sum(num_hetero_nodes))
             num_hetero_nodes = num_hetero_nodes[1:]
+            random.shuffle(num_hetero_nodes)
 
             assert sum(num_hetero_nodes) == num_nodes
             
