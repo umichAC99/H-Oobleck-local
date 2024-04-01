@@ -1,7 +1,8 @@
 import torch
 
 GpuType = str  # 'A100', 'V100'
-LayerExecutionResult = dict  # { 'forward': float, 'backward': float, 'mem_required': (float, float), ... }
+# { 'forward': float, 'backward': float, 'mem_required': (float, float), ... }
+LayerExecutionResult = dict 
 Layer = 'LayerIdentifier' 
 
 # We have TODO this part: function to initialize layers, model, and the profiler
@@ -13,7 +14,9 @@ gpu_profile_data: dict[GpuType, list[LayerExecutionResult]] = {
     'V100': [...],
 }
 
-def get_cost_model(gpu_types: list[GpuType], model_layers: list[Layer]) -> list[dict]:
+def get_cost_model(gpu_types: list[GpuType], model_layers: list[Layer]) 
+    -> list[dict]:
+
     profiler = initialize_profiler() 
     cost_model = []
 
