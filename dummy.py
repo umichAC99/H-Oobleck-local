@@ -16,6 +16,18 @@ gpu_profile_data: dict[GpuType, list[LayerExecutionResult]] = {
 
 def get_cost_model(gpu_types: list[GpuType], model_layers: list[Layer]) 
     -> list[dict]:
+    """
+    Function has this signature if it were C++
+    @return map<GpuType,vector<LayerExecutionResult>> 
+    @param vector<GpuType> gpuTypes
+    @param vector<layer> modelLayers
+
+    GpuTypes may just be strings or enums
+    modelLayers are Oobleck layer types
+    the return type is a mapping from gpuType to an array of
+    layerExecutionResult objects (these are oobleck data structures used to
+    input performance charactaristics.)
+    """
 
     profiler = initialize_profiler() 
     cost_model = []
