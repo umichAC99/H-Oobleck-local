@@ -154,6 +154,12 @@ PYBIND11_MODULE(pipeline_template, m) {
                     const int>())
       .def("solve", &GreedyPipelineRecoverSolver::solve);
 
+  py::class_<ButtomUpDPPipelineRecoverSolver>(m,
+                                              "ButtomUpDPPipelineRecoverSolver")
+      .def(py::init<const std::vector<float> &, const HeteroNodeSpec &,
+                    const int>())
+      .def("solve", &ButtomUpDPPipelineRecoverSolver::solve);
+
   m.def("get_profile_results", &get_profile_results, py::arg("model_name"),
         py::arg("model_tag"), py::arg("microbatch_size"), py::arg("node_type"));
 }

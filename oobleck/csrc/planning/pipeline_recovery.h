@@ -75,13 +75,16 @@ public:
             &layer_execution_results) override;
 };
 
-class ButtomUpDPipelineRecoverSolver : public BasePipelineRecoverSolver {
+class ButtomUpDPPipelineRecoverSolver : public BasePipelineRecoverSolver {
 public:
-  ButtomUpDPipelineRecoverSolver(const std::vector<float> &scaling_factors,
-                                 const HeteroNodeSpec &hetero_node_spec,
-                                 const int num_mbatches)
+  ButtomUpDPPipelineRecoverSolver(const std::vector<float> &scaling_factors,
+                                  const HeteroNodeSpec &hetero_node_spec,
+                                  const int num_mbatches)
       : BasePipelineRecoverSolver(scaling_factors, hetero_node_spec,
-                                  num_mbatches) {}
+                                  num_mbatches) {
+    dp_choices_.resize(hetero_node_spec.size());
+    avail_devices_.resize(hetero_node_spec.size());
+  }
 
   typedef std::pair<int /*num device*/, int /*num stages that can be covered*/>
       Choice; // use $first number of devices for covering $second stages
@@ -97,10 +100,26 @@ public:
   DPChoices dp_choices_;
   DeviceResource avail_devices_;
   std::vector<DPState> dp_;
-  PipelineTemplate *longest_pipeline_;
+  const PipelineTemplate *longest_pipeline_;
+
+  void update_dp_slot(int idx, std::shared_ptr<DCExecutionResult> new_result,
+                      const DeviceResource &devices) {
+    assert(idx < dp_.size() && "idx is out of range");
+    if (dp_[idx].second == nullptr) {
+      dp_[idx] = DPState(devices, new_result);
+    } else {
+      if (dp_[idx].second->get_t() > new_result->get_t()) {
+        dp_[idx] = DPState(devices, new_result);
+      }
+    }
+  }
+
+  // pretty print all resources, choices and dp states
+  void print();
 
   // setup avail_devices_ and dp_choices_ based on input data
-  void preprocess();
+  void preprocess(const std::vector<std::shared_ptr<LayerExecutionResults>>
+                      &layer_execution_results);
 
   HeteroPipelineTemplate
   solve(const std::vector<PipelineTemplate> &pipeline_templates,

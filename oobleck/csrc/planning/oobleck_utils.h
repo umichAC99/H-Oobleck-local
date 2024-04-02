@@ -7,8 +7,10 @@
 #define DEBUG
 #ifdef DEBUG
 #define PRINT(x) std::cout << "[DEBUG]: " << x << std::endl << std::flush
+#define DEBUG_STMT(x) x
 #else
 #define PRINT(x)
+#define DEBUG_STMT(x)
 #endif
 
 namespace oobleck {
