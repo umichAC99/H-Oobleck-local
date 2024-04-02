@@ -143,13 +143,15 @@ PYBIND11_MODULE(pipeline_template, m) {
       .def(py::init<>())
       .def("create_pipeline_templates",
            &PipelineTemplateGenerator::create_pipeline_templates)
+      .def("create_pipeline_templates_all_stages",
+           &PipelineTemplateGenerator::create_pipeline_templates_all_stages)
       .def("create_hetero_pipeline_template",
            &PipelineTemplateGenerator::create_hetero_pipeline_template)
       .def("get_dc_cache", &PipelineTemplateGenerator::get_dc_cache);
 
   py::class_<GreedyPipelineRecoverSolver>(m, "GreedyPipelineRecoverSolver")
-      .def(py::init<const PipelineTemplate &, const std::vector<float> &,
-                    const HeteroNodeSpec &, const int>())
+      .def(py::init<const std::vector<float> &, const HeteroNodeSpec &,
+                    const int>())
       .def("solve", &GreedyPipelineRecoverSolver::solve);
 
   m.def("get_profile_results", &get_profile_results, py::arg("model_name"),

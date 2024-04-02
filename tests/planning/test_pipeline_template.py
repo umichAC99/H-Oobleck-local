@@ -35,15 +35,15 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         print("num layers: ", len(profiles[0].get()))
         # flush print buffer
         sys.stdout.flush()
-        pipeline_template_origin = generator.create_pipeline_templates(
+        pipeline_template_origin = generator.create_pipeline_templates_all_stages(
             profiles[0],
-            (num_nodes, num_nodes),  # num nodes range
+            num_nodes,  # num nodes range
             num_gpus_per_node,
             32,
-        )[0]
+        )
         print(pipeline_template_origin)
-        solver = GreedyPipelineRecoverSolver(pipeline_template_origin, scaling_factors, node_spec, 32)
-        plan = solver.solve(profiles)
+        solver = GreedyPipelineRecoverSolver(scaling_factors, node_spec, 32)
+        plan = solver.solve(pipeline_template_origin, profiles)
         print("approximated plan ", plan)
         
         pipeline_template = generator.create_hetero_pipeline_template(

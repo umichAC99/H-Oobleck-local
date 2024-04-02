@@ -79,17 +79,11 @@ struct HeteroNodeSpec {
       : node_specs(node_specs), num_total_nodes(num_total_nodes) {}
   HeteroNodeSpec() : num_total_nodes(0), idx_to_only_node(-1) {}
 
-  const std::vector<NodeConfig>& get() const {
-    return node_specs;
-  }
+  const std::vector<NodeConfig> &get() const { return node_specs; }
 
-  int size() const {
-    return num_total_nodes;
-  }
+  int size() const { return num_total_nodes; }
 
-  const NodeConfig& at(const int idx) const {
-    return node_specs[idx];
-  }
+  const NodeConfig &at(const int idx) const { return node_specs[idx]; }
 
   // update num_total_nodes and idx_to_only_node when node_specs is updated
   void update_fields() {
@@ -166,14 +160,17 @@ public:
     }
 
     for (int i = 0; i < num_gpus_used.size(); i++) {
-      PRINT("num_gpus_used for node type i : " + std::to_string(num_gpus_used[i]));
-      PRINT("availiavble num_gpus for node type i : " + std::to_string(
-            node_spec.node_specs[i].num_nodes *
+      PRINT("num_gpus_used for node type " + std::to_string(i) + " : " +
+            std::to_string(num_gpus_used[i]));
+      PRINT("availiavble num_gpus for node type " + std::to_string(i) + " : " +
+            std::to_string(
+                node_spec.node_specs[i].num_nodes *
                 node_spec.node_specs[node_spec.node_specs[i].node_type_idx]
                     .num_gpus));
-      assert(num_gpus_used[i] ==
+      assert(num_gpus_used[i] <=
              node_spec.node_specs[i].num_nodes *
-                 node_spec.node_specs[node_spec.node_specs[i].node_type_idx].num_gpus);
+                 node_spec.node_specs[node_spec.node_specs[i].node_type_idx]
+                     .num_gpus);
     }
 
     int stage_num_layers = 0;

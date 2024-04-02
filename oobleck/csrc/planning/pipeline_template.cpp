@@ -85,6 +85,44 @@ get_profile_results(const std::string &model_name, const std::string &model_tag,
 }
 
 std::vector<PipelineTemplate>
+PipelineTemplateGenerator::create_pipeline_templates_all_stages(
+    std::shared_ptr<LayerExecutionResults> layer_execution_results,
+    const int num_nodes, const int num_gpus_per_node, const int num_mbatches) {
+#ifdef PYBIND11_MODULE
+  // Release GIL
+  pybind11::gil_scoped_release release;
+#endif
+  int min_num_stages = num_nodes;
+  int max_num_stages = layer_execution_results->size();
+  std::vector<cppcoro::task<std::shared_ptr<DCExecutionResult>>> num_node_tasks;
+  for (int num_stages = min_num_stages; num_stages <= max_num_stages;
+       num_stages++) {
+    num_node_tasks.emplace_back(divide_and_conquer(
+        layer_execution_results,
+        std::make_tuple(0, layer_execution_results->size()), num_stages,
+        num_nodes, num_gpus_per_node, num_mbatches));
+  }
+
+  // wait for all tasks to complete
+  std::vector<std::shared_ptr<DCExecutionResult>> results =
+      cppcoro::sync_wait(cppcoro::when_all(std::move(num_node_tasks)));
+
+  // return a list of pipeline templates based on results
+  std::vector<PipelineTemplate> pipeline_templates;
+  for (auto result : results) {
+    // filter out all invalid results
+    if (result == nullptr)
+      continue;
+    pipeline_templates.emplace_back(PipelineTemplate(
+        result->get_stages(), result->get_t1(), result->get_t2(),
+        result->get_t3(), result->get_kstar_latency(), result->get_t(),
+        num_mbatches, layer_execution_results->size(), num_nodes,
+        num_gpus_per_node));
+  }
+  return pipeline_templates;
+}
+
+std::vector<PipelineTemplate>
 PipelineTemplateGenerator::create_pipeline_templates(
     std::shared_ptr<LayerExecutionResults> layer_execution_results,
     const std::tuple<int, int> &num_nodes, const int num_gpus_per_node,
@@ -137,16 +175,16 @@ PipelineTemplateGenerator::create_pipeline_templates(
     }
 
     auto optimal_result = [&]() -> std::shared_ptr<DCExecutionResult> {
-      // std::shared_ptr<DCExecutionResult> result(nullptr);
-      // for (int i = 0; i < results.size(); i++) {
-      //   if (result == nullptr) {
-      //     result = results[i];
-      //   } else if (results[i] != nullptr &&
-      //              results[i]->get_t() < result->get_t()) {
-      //     result = results[i];
-      //   }
-      // }
-      return results[4];
+      std::shared_ptr<DCExecutionResult> result(nullptr);
+      for (int i = 0; i < results.size(); i++) {
+        if (result == nullptr) {
+          result = results[i];
+        } else if (results[i] != nullptr &&
+                   results[i]->get_t() < result->get_t()) {
+          result = results[i];
+        }
+      }
+      return result;
     }();
 
     assert(optimal_result != nullptr &&

@@ -20,8 +20,8 @@ void empty_node_spec(HeteroNodeSpec &spec) {
   spec.num_total_nodes = 0;
 }
 
-void replace_device(HeteroNodeSpec &spec, int src, int dest,
-                           int src_device, int dest_device) {
+void replace_device(HeteroNodeSpec &spec, int src, int dest, int src_device,
+                    int dest_device) {
   spec.node_specs[src].num_total_gpus -= src_device;
   spec.num_total_gpus -= src_device;
   assert(spec.node_specs[src].num_total_gpus >= 0 &&
@@ -76,7 +76,7 @@ static std::string get_cache_key_recovery_merge(
 void BasePipelineRecoverSolver::update_homo_dc_cache(
     const std::vector<std::shared_ptr<StageExecutionResult>> &stages) {
   int total_gpu_nums = 0;
-  
+
   for (int i = 0; i < stages.size(); i++) {
     total_gpu_nums = stages[i]->num_gpus_;
     assert(stages[i]->node_type_idx_ == 0 &&
@@ -87,8 +87,8 @@ void BasePipelineRecoverSolver::update_homo_dc_cache(
     auto current_result = std::make_shared<DCExecutionResult>(stages[i]);
     // insert current result to cache
     {
-       DCExecutionResult::key key = std::make_tuple(
-          1, start_layer_idx, end_layer_idx+1,
+      DCExecutionResult::key key = std::make_tuple(
+          1, start_layer_idx, end_layer_idx + 1,
           DCExecutionResult::get_device_indices_key(curr_total_gpu_nums, 0));
       auto it = dc_cache_.find(key);
       if (it == dc_cache_.end()) {
@@ -325,5 +325,4 @@ BasePipelineRecoverSolver::try_assign(
   return curr_result;
 }
 
-
-}
+} // namespace oobleck
