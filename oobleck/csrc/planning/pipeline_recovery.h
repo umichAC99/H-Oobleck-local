@@ -3,7 +3,7 @@
 
 #include "hetero_pipeline_template.h"
 #include "pipeline_template.h"
-#include <map>
+#include <unordered_map>
 namespace oobleck {
 class BasePipelineRecoverSolver {
 protected:
@@ -17,6 +17,13 @@ protected:
   const HeteroNodeSpec &hetero_node_spec_;
   const int num_mbatches_;
   CacheMap dc_cache_;
+
+  std::shared_ptr<oobleck::DCExecutionResult>
+  merge_stages(const std::vector<std::shared_ptr<StageExecutionResult>> &stages,
+               const int start_stage_idx, const int end_stage_idx,
+               const int num_devices, const int node_type_idx,
+               const int num_mbatches,
+               const std::shared_ptr<LayerExecutionResults> profile);
 
   // update dc_cache for homogenous pipeline template
   void update_homo_dc_cache(
@@ -62,6 +69,33 @@ public:
   solve_one(const PipelineTemplate &pipeline_templates,
             const std::vector<std::shared_ptr<LayerExecutionResults>>
                 &layer_execution_results);
+
+  HeteroPipelineTemplate
+  solve(const std::vector<PipelineTemplate> &pipeline_templates,
+        const std::vector<std::shared_ptr<LayerExecutionResults>>
+            &layer_execution_results) override;
+};
+
+class ButtomUpDPipelineRecoverSolver : public BasePipelineRecoverSolver {
+public:
+  ButtomUpDPipelineRecoverSolver(const std::vector<float> &scaling_factors,
+                                 const HeteroNodeSpec &hetero_node_spec,
+                                 const int num_mbatches)
+      : BasePipelineRecoverSolver(scaling_factors, hetero_node_spec,
+                                  num_mbatches) {}
+
+  typedef std::pair<int, int>
+      Choice; // use $first number of devices for covering $second stages
+  typedef std::unordered_map<int, std::vector<Choice>>
+      DPChoices; // DPChoices[i] is the all possible choices for node type i
+  typedef std::unordered_map<int, int>
+      AvailDevices; // AvailDevices[i] is the number of available devices for
+                    // node type i
+
+  DPChoices dp_choices_;
+  AvailDevices avail_devices_;
+
+  void preprocess();
 
   HeteroPipelineTemplate
   solve(const std::vector<PipelineTemplate> &pipeline_templates,
