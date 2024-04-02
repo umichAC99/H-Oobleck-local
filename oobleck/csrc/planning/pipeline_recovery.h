@@ -22,7 +22,6 @@ protected:
   merge_stages(const std::vector<std::shared_ptr<StageExecutionResult>> &stages,
                const int start_stage_idx, const int end_stage_idx,
                const int num_devices, const int node_type_idx,
-               const int num_mbatches,
                const std::shared_ptr<LayerExecutionResults> profile);
 
   // update dc_cache for homogenous pipeline template
@@ -84,17 +83,23 @@ public:
       : BasePipelineRecoverSolver(scaling_factors, hetero_node_spec,
                                   num_mbatches) {}
 
-  typedef std::pair<int, int>
+  typedef std::pair<int /*num device*/, int /*num stages that can be covered*/>
       Choice; // use $first number of devices for covering $second stages
-  typedef std::unordered_map<int, std::vector<Choice>>
+  typedef std::vector<std::vector<Choice>>
       DPChoices; // DPChoices[i] is the all possible choices for node type i
-  typedef std::unordered_map<int, int>
-      AvailDevices; // AvailDevices[i] is the number of available devices for
-                    // node type i
+  typedef std::vector<int> DeviceResource; // AvailDevices[i] is the number of
+                                           // available devices for node type i
+  typedef std::pair<DeviceResource, std::shared_ptr<oobleck::DCExecutionResult>>
+      DPState; // DPState.first is the number of assigned devices for each node
+               // type DPState.second is the execution result for the current
+               // state
 
   DPChoices dp_choices_;
-  AvailDevices avail_devices_;
+  DeviceResource avail_devices_;
+  std::vector<DPState> dp_;
+  PipelineTemplate *longest_pipeline_;
 
+  // setup avail_devices_ and dp_choices_ based on input data
   void preprocess();
 
   HeteroPipelineTemplate

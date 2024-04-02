@@ -121,6 +121,26 @@ void BasePipelineRecoverSolver::update_homo_dc_cache(
   }
 }
 
+std::shared_ptr<oobleck::DCExecutionResult>
+BasePipelineRecoverSolver::merge_stages(
+    const std::vector<std::shared_ptr<StageExecutionResult>> &stages,
+    const int start_stage_idx, const int end_stage_idx, const int num_devices,
+    const int node_type_idx,
+    const std::shared_ptr<LayerExecutionResults> profile) {
+  assert(start_stage_idx >= 0 && end_stage_idx < stages.size() &&
+         "Invalid start and end stage index");
+  assert(num_devices > 0 && "Invalid number of devices");
+  assert(node_type_idx >= 0 && "Invalid node type index");
+
+  const int start_layer_idx = stages[start_stage_idx]->get_start_layer_index();
+  const int end_layer_idx = stages[end_stage_idx]->get_end_layer_index() + 1;
+
+  auto new_stage_result = std::make_shared<StageExecutionResult>(
+      profile, std::make_tuple(start_layer_idx, end_layer_idx), num_devices,
+      node_type_idx);
+  return std::make_shared<DCExecutionResult>(new_stage_result);
+}
+
 // update dc cache needed for next iteration
 void BasePipelineRecoverSolver::update_dc_cache(
     int idx, const std::vector<std::shared_ptr<StageExecutionResult>> &stages,
