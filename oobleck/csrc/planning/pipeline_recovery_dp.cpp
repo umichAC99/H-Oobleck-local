@@ -55,7 +55,7 @@ void ButtomUpDPPipelineRecoverSolver::preprocess(
   }
 
   // Initialize dp size
-  dp_.resize(current_stages.size() * 2,
+  dp_.resize(current_stages.size() + 1,
              {DeviceResource(hetero_node_spec_.size(), 0), nullptr});
 
   // Initialize all possible dp_choices_ for different node types and dp
@@ -82,6 +82,19 @@ void ButtomUpDPPipelineRecoverSolver::preprocess(
   }   // for i
 }
 
+/*
+
+for i in (2...S):
+  for choice in dp_choices_:
+    dp[i] = 
+      min(dp[i], merge_results(
+          dp[i - choice.stages], 
+          result([i - choice.stages...i], choice.devices
+          )
+        )
+      )
+
+*/
 HeteroPipelineTemplate ButtomUpDPPipelineRecoverSolver::solve(
     const std::vector<PipelineTemplate> &pipeline_templates,
     const std::vector<std::shared_ptr<LayerExecutionResults>>
@@ -97,11 +110,48 @@ HeteroPipelineTemplate ButtomUpDPPipelineRecoverSolver::solve(
   // pprint all initial states when debug
   DEBUG_STMT(print());
 
+  // Start DP
+  auto curr_stages = longest_pipeline_->get_stages();
+  for (int i = 1; i < dp_.size(); i++) {
+    for (int node_type_idx = 0; node_type_idx < dp_choices_.size(); node_type_idx++){
+      for (const auto& choice : dp_choices_[node_type_idx]) {
+        // if we cannot cover $choice.second stages from i, continue
+        if (i - choice.second < 0) {
+          continue;
+        }
+        DPState prev_state = dp_[i - choice.second];
+        // prev_state is infeasible, continue
+        if (prev_state.second == nullptr) {
+          continue;
+        }
+        DeviceResource assigned_device = prev_state.first;
+        // if apply this choice will exceed the device limit, continue
+        if (over_device_limit(assigned_device, node_type_idx, choice.first)) {
+          continue;
+        }
+        assigned_device[node_type_idx] += choice.first;
+        auto execution_result = std::make_shared<DCExecutionResult>(
+          prev_state.second,
+          merge_stages(
+            curr_stages, i - choice.second, i - 1, choice.first, node_type_idx,
+            layer_execution_results[node_type_idx]),
+          num_mbatches_);
+        update_dp_slot(i, execution_result, assigned_device);
+      } // for choice
+    }
+  }     // for i
+
+  assert(dp_[curr_stages.size()].second != nullptr &&
+         "final state is infeasible");
+
+  // pprint all initial states when debug
+  DEBUG_STMT(print());
+
   return HeteroPipelineTemplate(
-      longest_pipeline_->get_stages(), longest_pipeline_->get_t1(),
-      longest_pipeline_->get_t2(), longest_pipeline_->get_t3(),
-      longest_pipeline_->get_kstar_latency(),
-      longest_pipeline_->get_iteration_time(), num_mbatches_,
+      dp_[curr_stages.size()].second->get_stages(), dp_[curr_stages.size()].second->get_t1(),
+      dp_[curr_stages.size()].second->get_t2(), dp_[curr_stages.size()].second->get_t3(),
+      dp_[curr_stages.size()].second->get_kstar_latency(),
+      dp_[curr_stages.size()].second->get_t(), num_mbatches_,
       layer_execution_results[0]->size(), hetero_node_spec_);
 }
 } // namespace oobleck

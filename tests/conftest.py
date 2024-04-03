@@ -187,8 +187,8 @@ class OobleckStaticClassFactory:
         return HeteroNodeSpec(
             [
                 NodeConfig("A100", 1, 4, 1.0),
-                NodeConfig("H100", 1, 4, 2.0),
-                NodeConfig("B100", 1, 4, 4.0)
+                NodeConfig("H100", 1, 4, 1.5),
+                NodeConfig("B100", 1, 4, 2.0)
             ]
         )
     

@@ -114,6 +114,10 @@ public:
     }
   }
 
+  bool over_device_limit(const DeviceResource &devices, int node_type_idx, int new_device) {
+    return devices[node_type_idx] + new_device > avail_devices_[node_type_idx];
+  }
+
   // pretty print all resources, choices and dp states
   void print();
 
