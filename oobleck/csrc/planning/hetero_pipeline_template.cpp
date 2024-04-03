@@ -51,7 +51,7 @@ std::string HeteroNodeSpec::get_cache_key() const {
 std::string HeteroNodeSpec::get_cache_key_recovery() const {
   std::string result = "";
   for (auto &config : node_specs) {
-    if (config.num_nodes == 0) {
+    if (config.num_total_gpus == 0) {
       continue;
     }
     result += DCExecutionResult::get_device_indices_key(config.num_total_gpus,

@@ -89,6 +89,13 @@ class PipelineTemplateGenerator:
         num_gpus_per_node: int,
         num_mbatches: int = 0,
     ) -> list[PipelineTemplate]: ...
+    def create_pipeline_templates_all_stages(
+        self,
+        layer_execution_results: LayerExecutionResults,
+        num_nodes: int,
+        num_gpus_per_node: int,
+        num_mbatches: int = 0,
+    ) -> list[PipelineTemplate]: ...
     def create_hetero_pipeline_template(
         self,
         layer_execution_results: list[LayerExecutionResults],
@@ -99,9 +106,15 @@ class PipelineTemplateGenerator:
 class GreedyPipelineRecoverSolver
     def __init__(
         self,
-        pipeline_template: PipelineTemplate,
         scaling_factor: list[float],
         node_spec: HeteroNodeSpec,
     ): ...
-    def solve(self) -> HeteroPipelineTemplate: ...
-    def set_dc_cache(ptg: PipelineTemplateGenerator): ...
+    def solve(pipelines: list[PipelineTemplate], layer_execution_results: LayerExecutionResults) -> HeteroPipelineTemplate: ...
+    
+class ButtomUpDPPipelineRecoverSolver
+    def __init__(
+        self,
+        scaling_factor: list[float],
+        node_spec: HeteroNodeSpec,
+    ): ...
+    def solve(pipelines: list[PipelineTemplate], layer_execution_results: LayerExecutionResults) -> HeteroPipelineTemplate: ...

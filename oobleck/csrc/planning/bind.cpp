@@ -143,15 +143,22 @@ PYBIND11_MODULE(pipeline_template, m) {
       .def(py::init<>())
       .def("create_pipeline_templates",
            &PipelineTemplateGenerator::create_pipeline_templates)
+      .def("create_pipeline_templates_all_stages",
+           &PipelineTemplateGenerator::create_pipeline_templates_all_stages)
       .def("create_hetero_pipeline_template",
            &PipelineTemplateGenerator::create_hetero_pipeline_template)
       .def("get_dc_cache", &PipelineTemplateGenerator::get_dc_cache);
 
   py::class_<GreedyPipelineRecoverSolver>(m, "GreedyPipelineRecoverSolver")
-      .def(py::init<const PipelineTemplate &, const std::vector<float> &,
-                    const HeteroNodeSpec &, const int>())
-      .def("set_dc_cache", &GreedyPipelineRecoverSolver::set_dc_cache)
+      .def(py::init<const std::vector<float> &, const HeteroNodeSpec &,
+                    const int>())
       .def("solve", &GreedyPipelineRecoverSolver::solve);
+
+  py::class_<ButtomUpDPPipelineRecoverSolver>(m,
+                                              "ButtomUpDPPipelineRecoverSolver")
+      .def(py::init<const std::vector<float> &, const HeteroNodeSpec &,
+                    const int>())
+      .def("solve", &ButtomUpDPPipelineRecoverSolver::solve);
 
   m.def("get_profile_results", &get_profile_results, py::arg("model_name"),
         py::arg("model_tag"), py::arg("microbatch_size"), py::arg("node_type"));

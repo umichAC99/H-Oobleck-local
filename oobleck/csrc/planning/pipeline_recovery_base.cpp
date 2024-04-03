@@ -20,8 +20,8 @@ void empty_node_spec(HeteroNodeSpec &spec) {
   spec.num_total_nodes = 0;
 }
 
-void replace_device(HeteroNodeSpec &spec, int src, int dest,
-                           int src_device, int dest_device) {
+void replace_device(HeteroNodeSpec &spec, int src, int dest, int src_device,
+                    int dest_device) {
   spec.node_specs[src].num_total_gpus -= src_device;
   spec.num_total_gpus -= src_device;
   assert(spec.node_specs[src].num_total_gpus >= 0 &&
@@ -76,14 +76,29 @@ static std::string get_cache_key_recovery_merge(
 void BasePipelineRecoverSolver::update_homo_dc_cache(
     const std::vector<std::shared_ptr<StageExecutionResult>> &stages) {
   int total_gpu_nums = 0;
-  int end_layer_idx;
+
   for (int i = 0; i < stages.size(); i++) {
     total_gpu_nums = stages[i]->num_gpus_;
     assert(stages[i]->node_type_idx_ == 0 &&
            "It's not a homogenous pipeline template");
     int curr_total_gpu_nums = total_gpu_nums;
     int start_layer_idx = stages[i]->get_start_layer_index();
+    int end_layer_idx = stages[i]->get_end_layer_index();
     auto current_result = std::make_shared<DCExecutionResult>(stages[i]);
+    // insert current result to cache
+    {
+      DCExecutionResult::key key = std::make_tuple(
+          1, start_layer_idx, end_layer_idx + 1,
+          DCExecutionResult::get_device_indices_key(curr_total_gpu_nums, 0));
+      auto it = dc_cache_.find(key);
+      if (it == dc_cache_.end()) {
+        dc_cache_.insert({key, current_result});
+      } else {
+        assert(false && "DCExecutionResult already in cache");
+      }
+    }
+
+    // insert result(i, j) to cache
     for (int j = i + 1; j < stages.size(); j++) {
       assert(stages[j]->node_type_idx_ == 0 &&
              "It's not a homogenous pipeline template");
@@ -96,14 +111,34 @@ void BasePipelineRecoverSolver::update_homo_dc_cache(
           j - i + 1, start_layer_idx, end_layer_idx,
           DCExecutionResult::get_device_indices_key(curr_total_gpu_nums, 0));
       // if cannot find the key-val, insert it into cache
-      auto it = dc_cache_->find(key);
-      if (it == dc_cache_->end()) {
-        dc_cache_->insert({key, current_result});
-      } else if (it->second->get_t() > current_result->get_t()) {
-        it->second = current_result;
+      auto it = dc_cache_.find(key);
+      if (it == dc_cache_.end()) {
+        dc_cache_.insert({key, current_result});
+      } else {
+        assert(false && "DCExecutionResult already in cache");
       }
     } // for
   }
+}
+
+std::shared_ptr<oobleck::DCExecutionResult>
+BasePipelineRecoverSolver::merge_stages(
+    const std::vector<std::shared_ptr<StageExecutionResult>> &stages,
+    const int start_stage_idx, const int end_stage_idx, const int num_devices,
+    const int node_type_idx,
+    const std::shared_ptr<LayerExecutionResults> profile) {
+  assert(start_stage_idx >= 0 && end_stage_idx < stages.size() &&
+         "Invalid start and end stage index");
+  assert(num_devices > 0 && "Invalid number of devices");
+  assert(node_type_idx >= 0 && "Invalid node type index");
+
+  const int start_layer_idx = stages[start_stage_idx]->get_start_layer_index();
+  const int end_layer_idx = stages[end_stage_idx]->get_end_layer_index() + 1;
+
+  auto new_stage_result = std::make_shared<StageExecutionResult>(
+      profile, std::make_tuple(start_layer_idx, end_layer_idx), num_devices,
+      node_type_idx);
+  return std::make_shared<DCExecutionResult>(new_stage_result);
 }
 
 // update dc cache needed for next iteration
@@ -126,9 +161,9 @@ void BasePipelineRecoverSolver::update_dc_cache(
         get_cache_key_recovery_merge(left_spec, right_spec, current_stage));
     // PRINT("Current Key: " + DCExecutionResult::key_to_string(dc_cache_key) +
     //       " to result " + current_result->to_string());
-    auto it = dc_cache_->find(dc_cache_key);
-    assert(it == dc_cache_->end() && "DCExecutionResult already in cache");
-    dc_cache_->insert({dc_cache_key, current_result});
+    auto it = dc_cache_.find(dc_cache_key);
+    assert(it == dc_cache_.end() && "DCExecutionResult already in cache");
+    dc_cache_.insert({dc_cache_key, current_result});
   }
 
   // initialize left and right
@@ -156,8 +191,8 @@ void BasePipelineRecoverSolver::update_dc_cache(
           get_dc_key(idx - i, stages[i]->get_start_layer_index(),
                      stages[idx - 1]->get_end_layer_index() + 1, left_spec);
       // PRINT("Key1: " + DCExecutionResult::key_to_string(key));
-      auto it = dc_cache_->find(key);
-      if (it != dc_cache_->end()) {
+      auto it = dc_cache_.find(key);
+      if (it != dc_cache_.end()) {
         left_result = it->second;
       } else {
         assert(false && "Left DCExecutionResult not found");
@@ -170,8 +205,8 @@ void BasePipelineRecoverSolver::update_dc_cache(
       auto key = get_dc_key(j - idx, stages[idx + 1]->get_start_layer_index(),
                             stages[j]->get_end_layer_index() + 1, right_spec);
       // PRINT("Key2: " + DCExecutionResult::key_to_string(key));
-      auto it = dc_cache_->find(key);
-      if (it != dc_cache_->end()) {
+      auto it = dc_cache_.find(key);
+      if (it != dc_cache_.end()) {
         right_result = it->second;
       } else {
         assert(false && "Right DCExecutionResult not found");
@@ -201,9 +236,9 @@ void BasePipelineRecoverSolver::update_dc_cache(
       // PRINT(
       //     "Left+Right Key: " + DCExecutionResult::key_to_string(dc_cache_key)
       //     + " to result " + result_to_cache->to_string());
-      it = dc_cache_->find(dc_cache_key);
-      assert(it == dc_cache_->end() && "DCExecutionResult already in cache");
-      dc_cache_->insert({dc_cache_key, result_to_cache});
+      it = dc_cache_.find(dc_cache_key);
+      assert(it == dc_cache_.end() && "DCExecutionResult already in cache");
+      dc_cache_.insert({dc_cache_key, result_to_cache});
 
       // update right spec
       replace_device(right_spec, stages[j]->node_type_idx_, 0,
@@ -223,9 +258,9 @@ void BasePipelineRecoverSolver::update_dc_cache(
       // DCExecutionResult::key_to_string(dc_cache_key) +
       //       " to result " + result_to_cache->to_string());
       // insert key pair to dc_cache
-      auto it = dc_cache_->find(dc_cache_key);
-      assert(it == dc_cache_->end() && "DCExecutionResult already in cache");
-      dc_cache_->insert({dc_cache_key, result_to_cache});
+      auto it = dc_cache_.find(dc_cache_key);
+      assert(it == dc_cache_.end() && "DCExecutionResult already in cache");
+      dc_cache_.insert({dc_cache_key, result_to_cache});
       replace_device(left_spec, stages[i]->node_type_idx_, 0,
                      stages[i]->num_gpus_, 0);
     }
@@ -248,8 +283,8 @@ BasePipelineRecoverSolver::try_assign(
     auto key =
         get_dc_key(idx, 0, stages[idx - 1]->get_end_layer_index() + 1, left);
     // PRINT("Left Key: " + DCExecutionResult::key_to_string(key));
-    auto it = dc_cache_->find(key);
-    if (it != dc_cache_->end()) {
+    auto it = dc_cache_.find(key);
+    if (it != dc_cache_.end()) {
       left_result = it->second;
     } else {
       assert(false && "Left DCExecutionResult not found");
@@ -262,9 +297,9 @@ BasePipelineRecoverSolver::try_assign(
     auto key = get_dc_key(
         stages.size() - idx - 1, stages[idx + 1]->get_start_layer_index(),
         stages[stages.size() - 1]->get_end_layer_index() + 1, right);
-    auto it = dc_cache_->find(key);
+    auto it = dc_cache_.find(key);
     // PRINT("Right Key: " + DCExecutionResult::key_to_string(key));
-    if (it != dc_cache_->end()) {
+    if (it != dc_cache_.end()) {
       right_result = it->second;
     } else {
       assert(false && "Right DCExecutionResult not found");
@@ -310,5 +345,4 @@ BasePipelineRecoverSolver::try_assign(
   return curr_result;
 }
 
-
-}
+} // namespace oobleck

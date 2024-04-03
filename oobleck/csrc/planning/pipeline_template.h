@@ -159,6 +159,11 @@ public:
       const std::tuple<int, int> &num_nodes, const int num_gpus_per_node,
       const int num_mbatches = 0);
 
+  std::vector<PipelineTemplate> create_pipeline_templates_all_stages(
+      std::shared_ptr<LayerExecutionResults> layer_execution_results,
+      const int num_nodes, const int num_gpus_per_node,
+      const int num_mbatches = 0);
+
   // create one hetero pipeline template based on node spec and layer execution
   // results
   HeteroPipelineTemplate create_hetero_pipeline_template(
