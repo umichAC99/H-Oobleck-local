@@ -49,23 +49,23 @@ void ButtomUpDPPipelineRecoverSolver::preprocess(
   auto current_stages = longest_pipeline_->get_stages();
 
   // Initialize avail_devices_
-  for (int i = 0; i < hetero_node_spec_.size(); i++) {
+  for (int i = 0; i < hetero_node_spec_.node_specs.size(); i++) {
     avail_devices_[i] = hetero_node_spec_.node_specs[i].num_nodes *
                         hetero_node_spec_.node_specs[i].num_gpus;
   }
 
   // Initialize dp size
   dp_.resize(current_stages.size() + 1,
-             {DeviceResource(hetero_node_spec_.size(), 0), nullptr});
+             {DeviceResource(hetero_node_spec_.node_specs.size(), 0), nullptr});
 
   // Initialize all possible dp_choices_ for different node types and dp
   // starting state
   /* default result is that we merge $covered_stages stages starting from 0 with
    * $j devices in type i */
   /* DP[covered_stage] = (assigned_device, execution_result) */
-  for (int i = 0; i < hetero_node_spec_.size(); i++) {
+  for (int i = 0; i < hetero_node_spec_.node_specs.size(); i++) {
     dp_choices_[i] = std::vector<Choice>();
-    DeviceResource assigned_device(hetero_node_spec_.size(), 0);
+    DeviceResource assigned_device(hetero_node_spec_.node_specs.size(), 0);
     for (int j = 1; j <= hetero_node_spec_.node_specs[i].num_gpus; j *= 2) {
       int covered_stage = (int)floor(scaling_factors_[i] * j);
       dp_choices_[i].push_back(Choice(j, covered_stage));
@@ -77,9 +77,12 @@ void ButtomUpDPPipelineRecoverSolver::preprocess(
       // dp_[covered_stage] = DPState(assigned_device, execution_result);
       update_dp_slot(covered_stage, execution_result, assigned_device);
       //   PRINT("dp_" + std::to_string(covered_stage) + " is updated with " +
-      //   execution_result->to_string());
+      // PRINT("dp_" + std::to_string(covered_stage) + " is updated with " +
+      //       execution_result->to_string());
+      // DEBUG_STMT(print());
     } // for j
   }   // for i
+
 }
 
 /*
@@ -99,10 +102,11 @@ HeteroPipelineTemplate ButtomUpDPPipelineRecoverSolver::solve(
     const std::vector<PipelineTemplate> &pipeline_templates,
     const std::vector<std::shared_ptr<LayerExecutionResults>>
         &layer_execution_results) {
+  PRINT("layer_execution_results size is " + std::to_string(layer_execution_results.size()));
+  PRINT("hetero_node_spec_ is " + hetero_node_spec_.to_string());
   assert(pipeline_templates.size() > 0 && "pipeline_templates is empty");
-  assert(layer_execution_results.size() == hetero_node_spec_.size() &&
+  assert(layer_execution_results.size() == hetero_node_spec_.node_specs.size() &&
          "layer_execution_results size is not equal to hetero_node_spec_ size");
-
   // preprocess initial dp states and choices
   longest_pipeline_ = &pipeline_templates[pipeline_templates.size() - 1];
   preprocess(layer_execution_results);
@@ -115,6 +119,8 @@ HeteroPipelineTemplate ButtomUpDPPipelineRecoverSolver::solve(
   for (int i = 1; i < dp_.size(); i++) {
     for (int node_type_idx = 0; node_type_idx < dp_choices_.size(); node_type_idx++){
       for (const auto& choice : dp_choices_[node_type_idx]) {
+        std::cout << "In DP[" << i << "] " << std::endl;
+        std::cout << "Choice: " << choice.first << " devices to cover " << choice.second << " stages" << std::endl;
         // if we cannot cover $choice.second stages from i, continue
         if (i - choice.second < 0) {
           continue;
@@ -136,16 +142,30 @@ HeteroPipelineTemplate ButtomUpDPPipelineRecoverSolver::solve(
             curr_stages, i - choice.second, i - 1, choice.first, node_type_idx,
             layer_execution_results[node_type_idx]),
           num_mbatches_);
+        std::cout << "DP[" << i - choice.second <<"] + " << choice.first << " devices to cover " << choice.second << " stages" << std::endl;
+
+        std::cout << "Try to Assign Devices: ";
+        for (int j = 0; j < assigned_device.size(); j++) {
+          std::cout << assigned_device[j] << '\t';
+        }
+        std::cout << "With Execution Result: " << execution_result->to_string()
+                  << std::endl;
         update_dp_slot(i, execution_result, assigned_device);
+        std::cout << "DP[" << i << "] is updated with " << std::endl;
+        std::cout << "Assign Devices: ";
+        for (int j = 0; j < dp_[i].first.size(); j++) {
+          std::cout << dp_[i].first[j] << '\t';
+        }
+        std::cout << dp_[i].second->to_string() << std::endl;
       } // for choice
     }
   }     // for i
 
-  assert(dp_[curr_stages.size()].second != nullptr &&
-         "final state is infeasible");
-
   // pprint all initial states when debug
   DEBUG_STMT(print());
+
+  assert(dp_[curr_stages.size()].second != nullptr &&
+         "final state is infeasible");
 
   return HeteroPipelineTemplate(
       dp_[curr_stages.size()].second->get_stages(), dp_[curr_stages.size()].second->get_t1(),

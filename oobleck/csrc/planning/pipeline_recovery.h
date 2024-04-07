@@ -82,8 +82,8 @@ public:
                                   const int num_mbatches)
       : BasePipelineRecoverSolver(scaling_factors, hetero_node_spec,
                                   num_mbatches) {
-    dp_choices_.resize(hetero_node_spec.size());
-    avail_devices_.resize(hetero_node_spec.size());
+    dp_choices_.resize(hetero_node_spec.node_specs.size());
+    avail_devices_.resize(hetero_node_spec.node_specs.size());
   }
 
   typedef std::pair<int /*num device*/, int /*num stages that can be covered*/>

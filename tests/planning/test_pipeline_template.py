@@ -18,10 +18,11 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     @pytest.mark.skip(reason="Skipped")
     def test_node_folding_greedy(self):
         generator = PipelineTemplateGenerator()
-        node_spec = self.factory.get_dummy_hetero_node_spec()
+        node_spec = self.factory.get_hetero_node_spec(is_random=False, num_nodes=5)
         profiles = self.factory.get_dummy_profile_by_scaling(node_spec)
-        # print(node_spec)
-        # print(profiles)
+        print(node_spec)
+        print(profiles)
+        sys.stdout.flush()
         # print("LOG: running ground truth")
         # pipeline_template = generator.create_hetero_pipeline_template(
         #     profiles,
@@ -59,7 +60,7 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     
     def test_node_folding_dp(self):
         generator = PipelineTemplateGenerator()
-        node_spec = self.factory.get_dummy_hetero_node_spec()
+        node_spec = node_spec = self.factory.get_hetero_node_spec(is_random=False, num_nodes=5)
         profiles = self.factory.get_dummy_profile_by_scaling(node_spec)
         # print(node_spec)
         # print(profiles)

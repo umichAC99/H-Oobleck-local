@@ -83,10 +83,10 @@ public:
       backward_ += layer.backward_ / num_gpus_;
 
       // removed allreduce cost for simplicity
-      // if (num_gpus_ > 1) {
-      //   forward_ += layer.allreduce_in_node_.at(num_gpus_);
-      //   backward_ += layer.allreduce_in_node_.at(num_gpus_);
-      // }
+      if (num_gpus_ > 1) {
+        forward_ += layer.allreduce_in_node_.at(num_gpus_);
+        backward_ += layer.allreduce_in_node_.at(num_gpus_);
+      }
 
       for (const auto &it : layer.allreduce_across_nodes_) {
         allreduce_across_nodes_[it.first] += it.second;
