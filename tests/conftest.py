@@ -127,7 +127,7 @@ class OobleckStaticClassFactory:
         scaling_factors = [max_forward_cost / forward_cost for forward_cost in forward_cost_sums]
         num_nodes = 0.0
         for i in range(len(node_spec._node_specs)):
-            num_nodes += node_spec._node_specs[i]._num_nodes * scaling_factors[i]
+            num_nodes += node_spec._node_specs[i]._num_nodes * int(scaling_factors[i])
         
         return (int(num_nodes), node_spec._node_specs[0]._num_gpus, scaling_factors)
 
@@ -144,7 +144,7 @@ class OobleckStaticClassFactory:
                         layer_index=index,
                         forward=abs(random.random()) + 1.0,
                         backward=abs(random.random() * 3) + 1.0,
-                        allreduce_in_node={i + 1: random.random() for i in range(8)},
+                        allreduce_in_node={i : random.random()/10.0 for i in range(8)},
                         allreduce_across_nodes={
                             i + 1: random.random() * 4 for i in range(64)
                         },
@@ -170,7 +170,7 @@ class OobleckStaticClassFactory:
                         layer_index=index,
                         forward=abs(random.random())+1.0,
                         backward=abs(random.random() * 3)+1.0,
-                        allreduce_in_node={i + 1: random.random() for i in range(8)},
+                        allreduce_in_node={i : random.random()/10.0 for i in range(8)},
                         allreduce_across_nodes={
                             i + 1: random.random() * 4 for i in range(64)
                         },
