@@ -31,6 +31,7 @@ from oobleck.execution.dataloader import LoaderType, OobleckDataLoader
 from oobleck.execution.dataset import OobleckDataset
 from oobleck.execution.pipeline import OobleckPipeline
 from oobleck.module.model import OobleckModel
+from oobleck.elastic.training_util import OobleckArguments, DistributedArguments, ModelArguments, JobArguments
 
 TRAIN_BATCH_SIZE = 1
 EVAL_BATCH_SIZE = 2
@@ -117,6 +118,30 @@ class OobleckStaticClassFactory:
             )
 
         return self._model
+    
+    def get_args(self, model_tag: str="test", microbatch_size=1) -> OobleckArguments:
+        return (
+            OobleckArguments(
+                    DistributedArguments(
+                        "localhost",
+                        12306,
+                        ["localhost"]
+                    ), 
+                    JobArguments(
+                        fault_threshold=0,
+                        microbatch_size=microbatch_size,
+                        global_microbatch_size=4 * microbatch_size,
+                        steps=1
+                    ), 
+                    ModelArguments(
+                        model_name=self._model_data.model_name,
+                        model_tag=model_tag,
+                        dataset_path=self._model_data.dataset_path,
+                        dataset_name=self._model_data.dataset_name,
+                        model_args=model_args.get(self._model_data.model_name, None)
+                    ),
+                )
+        )
     
     # Takes in a list of LayerExecutionResults and a HeteroNodeSpec and returns a tuple of the number of nodes, number of gpus per node, and a list of scaling factors
     def dummy_node_folding(self, profiles: list[LayerExecutionResults], node_spec: HeteroNodeSpec) -> tuple[int, int, list[float]]:

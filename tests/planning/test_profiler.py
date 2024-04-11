@@ -16,11 +16,12 @@ from oobleck.csrc.planning.pipeline_template import (
     get_profile_results,
 )
 from oobleck.module.model import OobleckModel
-from oobleck.planning.profiler import Profiler
+from oobleck.execution.dataset import OobleckDataset
+from oobleck.planning.profiler import Profiler, profile
 from tests.conftest import OobleckMultiProcessTestCase, OobleckSingleProcessTestCase
+from oobleck.elastic.training_util import OobleckArguments
 
-
-@pytest.mark.skip(reason="Blocking vscode test status track.")
+# @pytest.mark.skip(reason="Blocking vscode test status track.")
 class TestProfiler(OobleckSingleProcessTestCase):
     @pytest.fixture(scope="function")
     def model(self) -> OobleckModel:
@@ -34,7 +35,7 @@ class TestProfiler(OobleckSingleProcessTestCase):
         reason="Duplicated test. Remove it only if test_profile_* test fails."
     )
     def test_profile_execution_layers(self, model: OobleckModel, distributed):
-        profiler = Profiler(model)
+        profiler = Profiler(model, 1, 1) # single node single device
 
         assert all(
             all(not p.is_cuda for p in layer.parameters()) for layer in model.layers
@@ -131,20 +132,16 @@ class TestProfiler(OobleckSingleProcessTestCase):
 
     def test_profile_single_microbatch(self, model: OobleckModel, random_tag: str):
         assert not torch.distributed.is_initialized()
-
+        args = self.factory.get_args(random_tag)
         process = mp.get_context("spawn").Process(
             target=profile,
             args=(
-                model.model_name,
-                model.sample_inputs,
+                args,
                 "localhost",
-                0,
+                12306,
+                1,
                 1,
                 0,
-                0,
-                1,
-                random_tag,
-                model.model_args.to_dict(),
             ),
         )
         process.start()
@@ -173,20 +170,16 @@ class TestProfiler(OobleckSingleProcessTestCase):
 
     def test_profile_multi_microbatch(self, model: OobleckModel, random_tag: str):
         assert not torch.distributed.is_initialized()
-
+        args = self.factory.get_args(random_tag, microbatch_size=4)
         process = mp.get_context("spawn").Process(
             target=profile,
             args=(
-                model.model_name,
-                model.sample_inputs,
+                args,
                 "localhost",
-                0,
+                12306,
+                1,
                 1,
                 0,
-                0,
-                4,
-                random_tag,
-                model.model_args.to_dict(),
             ),
         )
         process.start()
@@ -219,6 +212,7 @@ class TestProfiler(OobleckSingleProcessTestCase):
             model_name=model.model_name,
             model_tag=random_tag,
             microbatch_size=1,
+            node_type="",
         )
 
         assert isinstance(results, LayerExecutionResults)
