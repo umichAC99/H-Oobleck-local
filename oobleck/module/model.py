@@ -18,11 +18,12 @@ from oobleck.module.sharding import get_split_points, shard_model
 RANDOM_SEED = 42
 
 # Oobleck has been tested only with the following models.
-lang_models = ["gpt2", "t5", "bert", "bloom"]
+lang_models = ["gpt2", "gpt2-xl", "t5", "bert", "bloom"]
 image_models = ["vit", "resnet", "clip", "swin"]
 
 automodel_dict = {
     "gpt2": AutoModelForPreTraining,
+    "gpt2-xl": AutoModelForCausalLM, # add LM head
     "t5": AutoModelForPreTraining,
     "bert": AutoModelForCausalLM,
     "bloom": AutoModelForPreTraining,

@@ -208,6 +208,7 @@ class TestProfiler(OobleckSingleProcessTestCase):
 
     def test_load_profile_results(self, model: OobleckModel, random_tag: str):
         self.test_profile_single_microbatch(model, random_tag)
+        print(f"tag: {random_tag}")
         results = get_profile_results(
             model_name=model.model_name,
             model_tag=random_tag,
