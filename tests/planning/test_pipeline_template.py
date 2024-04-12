@@ -18,10 +18,18 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     @pytest.mark.skip(reason="Skipped")
     def test_node_folding_greedy(self):
         generator = PipelineTemplateGenerator()
-        node_spec = self.factory.get_dummy_hetero_node_spec()
+        node_spec = self.factory.get_hetero_node_spec(is_random=False, num_nodes=5)
         profiles = self.factory.get_dummy_profile_by_scaling(node_spec)
-        # print(node_spec)
-        # print(profiles)
+        print(node_spec)
+        print(profiles)
+        sys.stdout.flush()
+        
+        pipeline_template = generator.create_hetero_pipeline_template(
+            profiles,
+            node_spec,
+            32,
+        )
+        print("real plan ", pipeline_template)
         # print("LOG: running ground truth")
         # pipeline_template = generator.create_hetero_pipeline_template(
         #     profiles,
@@ -47,29 +55,21 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         solver = GreedyPipelineRecoverSolver(scaling_factors, node_spec, 32)
         plan = solver.solve(pipeline_template_origin, profiles)
         print("approximated plan ", plan)
-        
+        # plan = recovery(pipeline_template_origin, scaling_factors, node_spec)
+        # compare(plan, pipeline_template)
+    
+    def test_node_folding_dp(self):
+        generator = PipelineTemplateGenerator()
+        node_spec = node_spec = self.factory.get_hetero_node_spec(is_random=False, num_nodes=5)
+        profiles = self.factory.get_dummy_profile_by_scaling(node_spec)
+
         pipeline_template = generator.create_hetero_pipeline_template(
             profiles,
             node_spec,
             32,
         )
         print("real plan ", pipeline_template)
-        # plan = recovery(pipeline_template_origin, scaling_factors, node_spec)
-        # compare(plan, pipeline_template)
-    
-    def test_node_folding_dp(self):
-        generator = PipelineTemplateGenerator()
-        node_spec = self.factory.get_dummy_hetero_node_spec()
-        profiles = self.factory.get_dummy_profile_by_scaling(node_spec)
-        # print(node_spec)
-        # print(profiles)
-        # print("LOG: running ground truth")
-        # pipeline_template = generator.create_hetero_pipeline_template(
-        #     profiles,
-        #     node_spec,
-        #     32,
-        # )
-        # print(pipeline_template)
+        
         print("LOG: running node folding")
         (num_nodes, num_gpus_per_node, scaling_factors) = self.factory.dummy_node_folding(profiles, node_spec)
         print("num_nodes: ", num_nodes)
@@ -88,13 +88,6 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         solver = ButtomUpDPPipelineRecoverSolver(scaling_factors, node_spec, 32)
         plan = solver.solve(pipeline_template_origin, profiles)
         print("approximated plan ", plan)
-        
-        pipeline_template = generator.create_hetero_pipeline_template(
-            profiles,
-            node_spec,
-            32,
-        )
-        print("real plan ", pipeline_template)
         # plan = recovery(pipeline_template_origin, scaling_factors, node_spec)
         # compare(plan, pipeline_template)
         

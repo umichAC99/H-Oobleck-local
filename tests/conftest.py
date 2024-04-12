@@ -155,7 +155,7 @@ class OobleckStaticClassFactory:
         scaling_factors = [max_forward_cost / forward_cost for forward_cost in forward_cost_sums]
         num_nodes = 0.0
         for i in range(len(node_spec._node_specs)):
-            num_nodes += node_spec._node_specs[i]._num_nodes * scaling_factors[i]
+            num_nodes += node_spec._node_specs[i]._num_nodes * int(scaling_factors[i])
         
         return (int(num_nodes), node_spec._node_specs[0]._num_gpus, scaling_factors)
 
@@ -172,7 +172,7 @@ class OobleckStaticClassFactory:
                         layer_index=index,
                         forward=abs(random.random()) + 1.0,
                         backward=abs(random.random() * 3) + 1.0,
-                        allreduce_in_node={i + 1: random.random() for i in range(8)},
+                        allreduce_in_node={i : random.random()/10.0 for i in range(8)},
                         allreduce_across_nodes={
                             i + 1: random.random() * 4 for i in range(64)
                         },
@@ -198,7 +198,7 @@ class OobleckStaticClassFactory:
                         layer_index=index,
                         forward=abs(random.random())+1.0,
                         backward=abs(random.random() * 3)+1.0,
-                        allreduce_in_node={i + 1: random.random() for i in range(8)},
+                        allreduce_in_node={i : random.random()/10.0 for i in range(8)},
                         allreduce_across_nodes={
                             i + 1: random.random() * 4 for i in range(64)
                         },
@@ -230,8 +230,8 @@ class OobleckStaticClassFactory:
             "gtx_1080ti": 0.6, # approx.
             "v_100_16gb": 1.0,
             "rtx_3090_24gb": 1.8,
-            "rtx_4090_24gb": 2.94,
-            "a_100_80gb_pcie": 4.41,
+            "rtx_4090_24gb": 3.0,
+            "a_100_80gb_pcie": 4.5,
             "h_100_80gb_pcie": 5.45,
         }
         assert num_nodes > 0, "Must have at least 1 node"
@@ -257,7 +257,7 @@ class OobleckStaticClassFactory:
             for _ in range(len(num_hetero_nodes)):
                 num_device_per_node.append(random.choice([1, 2, 4, 8]))
         else:
-            chosed_type = ["gtx_1080ti", "v_100_16gb", "rtx_4090_24gb"]
+            chosed_type = ["v_100_16gb", "rtx_4090_24gb", "a_100_80gb_pcie"]
             num_hetero_nodes = [1, 2, 2]
             num_device_per_node = [2, 2, 2]
             computer_power = [spec_pool[i] for i in chosed_type]
