@@ -101,6 +101,7 @@ class Profiler:
                         continue
 
                     results[idx][0] = forward
+                    # approx. backward time as forward * 3 ?
                     results[idx][1] = forward * 3
                     results[idx][2] = model_mem
                     results[idx][3] = activation_mem
