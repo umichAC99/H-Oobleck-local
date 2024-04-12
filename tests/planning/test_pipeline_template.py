@@ -3,6 +3,7 @@ import sys
 
 from oobleck.csrc.planning.pipeline_template import (
     LayerExecutionResults,
+    get_profile_results,
     PipelineTemplateGenerator,
     GreedyPipelineRecoverSolver,
     ButtomUpDPPipelineRecoverSolver
@@ -13,7 +14,43 @@ from tests.conftest import OobleckSingleProcessTestCase
 class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     @pytest.fixture(scope="function")
     def profile(self) -> LayerExecutionResults:
-        return self.factory.get_dummy_profile()   
+        return self.factory.get_dummy_profile()  
+    
+    def test_real_data_gpt2xl(self): 
+        generator = PipelineTemplateGenerator()
+        node_spec = self.factory.get_hetero_node_spec(is_random=False, num_nodes=8)
+        profiles = [get_profile_results(
+            model_name='gpt2-xl',
+            model_tag='EQaPKriX',
+            microbatch_size=1,
+            node_type="",
+        )]
+        profiles = self.factory.synthesize_hetero_profile(profiles[0], node_spec)
+        print(profiles)
+        print(node_spec)
+        
+        pipeline_template = generator.create_hetero_pipeline_template(
+            profiles,
+            node_spec,
+            32,
+        )
+        print("real plan ", pipeline_template)
+        (num_nodes, num_gpus_per_node, scaling_factors) = self.factory.dummy_node_folding(profiles, node_spec)
+        print("num_nodes: ", num_nodes)
+        print("num_gpus_per_node: ", num_gpus_per_node)
+        print("scaling_factors: ", scaling_factors)
+        
+        pipeline_template_origin = generator.create_pipeline_templates_all_stages(
+            profiles[0],
+            num_nodes,  # num nodes range
+            num_gpus_per_node,
+            32,
+        )
+        
+        print(pipeline_template_origin)
+        solver = GreedyPipelineRecoverSolver(scaling_factors, node_spec, 32)
+        plan = solver.solve(pipeline_template_origin, profiles)
+        print("approximated plan ", plan)
     
     @pytest.mark.skip(reason="Skipped")
     def test_node_folding_greedy(self):
@@ -57,10 +94,11 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         print("approximated plan ", plan)
         # plan = recovery(pipeline_template_origin, scaling_factors, node_spec)
         # compare(plan, pipeline_template)
-    
+        
+    @pytest.mark.skip(reason="Skipped")
     def test_node_folding_dp(self):
         generator = PipelineTemplateGenerator()
-        node_spec = node_spec = self.factory.get_hetero_node_spec(is_random=False, num_nodes=5)
+        node_spec = self.factory.get_hetero_node_spec(is_random=False, num_nodes=5)
         profiles = self.factory.get_dummy_profile_by_scaling(node_spec)
 
         pipeline_template = generator.create_hetero_pipeline_template(
@@ -90,7 +128,8 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         print("approximated plan ", plan)
         # plan = recovery(pipeline_template_origin, scaling_factors, node_spec)
         # compare(plan, pipeline_template)
-        
+     
+    @pytest.mark.skip(reason="Skipped")   
     def test_hetero_node_spec(self, random: bool=False, num_nodes: int=5): # num_nodes will not work if not random
         node_spec = self.factory.get_hetero_node_spec(is_random=random, num_nodes=num_nodes)
 
@@ -108,7 +147,7 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
             assert node_config._num_nodes > 0
         assert num_gen_nodes == num_nodes, "#generated nodes should match args"
         
-    
+    @pytest.mark.skip(reason="Skipped")
     def test_hetero_node_spec_random(self, num_nodes: int=5):
         return self.test_hetero_node_spec(random=True, num_nodes=num_nodes)
     

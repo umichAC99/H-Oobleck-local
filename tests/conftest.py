@@ -148,11 +148,11 @@ class OobleckStaticClassFactory:
     
     # Takes in a list of LayerExecutionResults and a HeteroNodeSpec and returns a tuple of the number of nodes, number of gpus per node, and a list of scaling factors
     def dummy_node_folding(self, profiles: list[LayerExecutionResults], node_spec: HeteroNodeSpec) -> tuple[int, int, list[float]]:
-        forward_cost_sums = [
-            sum([layer._forward for layer in profile.get()]) for profile in profiles
+        cost_sums = [
+            sum([(layer._forward + layer._backward) for layer in profile.get()]) for profile in profiles
         ]
-        max_forward_cost = max(forward_cost_sums)
-        scaling_factors = [max_forward_cost / forward_cost for forward_cost in forward_cost_sums]
+        max_forward_cost = max(cost_sums)
+        scaling_factors = [max_forward_cost / forward_cost for forward_cost in cost_sums]
         num_nodes = 0.0
         for i in range(len(node_spec._node_specs)):
             num_nodes += node_spec._node_specs[i]._num_nodes * int(scaling_factors[i])
@@ -172,7 +172,7 @@ class OobleckStaticClassFactory:
                         layer_index=index,
                         forward=abs(random.random()) + 1.0,
                         backward=abs(random.random() * 3) + 1.0,
-                        allreduce_in_node={i : random.random()/10.0 for i in range(8)},
+                        allreduce_in_node={i : random.random() for i in range(8)},
                         allreduce_across_nodes={
                             i + 1: random.random() * 4 for i in range(64)
                         },
@@ -198,7 +198,7 @@ class OobleckStaticClassFactory:
                         layer_index=index,
                         forward=abs(random.random())+1.0,
                         backward=abs(random.random() * 3)+1.0,
-                        allreduce_in_node={i : random.random()/10.0 for i in range(8)},
+                        allreduce_in_node={i : random.random() for i in range(8)},
                         allreduce_across_nodes={
                             i + 1: random.random() * 4 for i in range(64)
                         },
@@ -258,7 +258,7 @@ class OobleckStaticClassFactory:
                 num_device_per_node.append(random.choice([1, 2, 4, 8]))
         else:
             chosed_type = ["v_100_16gb", "rtx_4090_24gb", "a_100_80gb_pcie"]
-            num_hetero_nodes = [1, 2, 2]
+            num_hetero_nodes = [2, 3, 3]
             num_device_per_node = [2, 2, 2]
             computer_power = [spec_pool[i] for i in chosed_type]
 
@@ -269,35 +269,34 @@ class OobleckStaticClassFactory:
             ]
         )
         return hetero_spec
-      
-    def get_dummy_profile_by_scaling(self, node_spec: HeteroNodeSpec) -> list[LayerExecutionResults]:
-        #Assume node_spec[0] is the weakest one
+    
+    def synthesize_hetero_profile(self, base_profile: LayerExecutionResults, node_spec: HeteroNodeSpec) -> list[LayerExecutionResults]:
         result = []
-        weakest_layer_results = self.get_dummy_profile().get()
-        for i in range(0, len(weakest_layer_results)):
-            weakest_layer_results[i] = LayerExecutionResult(
-                layer_index=weakest_layer_results[i]._index,
-                forward=weakest_layer_results[i]._forward,
-                backward=weakest_layer_results[i]._backward,
-                allreduce_in_node=weakest_layer_results[i]._allreduce_in_node,
-                allreduce_across_nodes=weakest_layer_results[i]._allreduce_across_nodes,
-                mem_required=weakest_layer_results[i]._mem_required
-            )
-        result.append(LayerExecutionResults(weakest_layer_results))
-        
         # Iterate over other node types, append scaled layer results to result by computing power
-        for i in range(1, len(node_spec._node_specs)):
-            layer_results = [layer for layer in weakest_layer_results]
+        base_layers = base_profile.get()
+        for i in range(0, len(node_spec._node_specs)):
+            layer_results = [layer for layer in base_layers]
             for j in range(len(layer_results)):
                 layer_results[j] = LayerExecutionResult(
                     layer_index=layer_results[j]._index,
                     forward=layer_results[j]._forward * 1.0/node_spec._node_specs[i]._compute_power,
                     backward=layer_results[j]._backward * 1.0/node_spec._node_specs[i]._compute_power,
-                    allreduce_in_node=layer_results[j]._allreduce_in_node,
-                    allreduce_across_nodes=layer_results[j]._allreduce_across_nodes,
+                    allreduce_in_node={i : random.random() for i in range(8)},
+                    allreduce_across_nodes={
+                            i + 1: random.random() * 4 for i in range(64)
+                        },
                     mem_required=layer_results[j]._mem_required
                 )
             result.append(LayerExecutionResults(layer_results))
+        return result
+      
+    def get_dummy_profile_by_scaling(self, node_spec: HeteroNodeSpec) -> list[LayerExecutionResults]:
+        #Assume node_spec[0] is the weakest one
+        result = []
+        weakest_layer_results = self.get_dummy_profile().get()
+        result.append(LayerExecutionResults(weakest_layer_results))
+        
+        result += self.synthesize_hetero_profile(result[0], node_spec)
         return result
 
     def get_dummy_pipeline_template(
