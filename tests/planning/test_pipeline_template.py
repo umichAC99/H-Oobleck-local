@@ -1,5 +1,6 @@
 import pytest
 import sys
+import time
 
 from oobleck.csrc.planning.pipeline_template import (
     LayerExecutionResults,
@@ -16,6 +17,35 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     def profile(self) -> LayerExecutionResults:
         return self.factory.get_dummy_profile()  
     
+    def test_real_data_gpt2xl_research_artifact(self):
+        node_specs = self.factory.get_hetero_node_specs_artifact_experiments_int()
+        profiles = [get_profile_results(
+            model_name='gpt2-xl',
+            model_tag='EQaPKriX',
+            microbatch_size=1,
+            node_type="",
+        )]
+        for i in range(len(node_specs)):
+            generator = PipelineTemplateGenerator()
+            experiment_profiles = self.factory.synthesize_hetero_profile(profiles[0], node_specs[i], 2.94)
+            print("========Experiment: ", i, "========")
+            print(node_specs[i])
+            print(experiment_profiles)
+            print("Start Approximation")
+            start = time.time()
+            approx_plan = self.factory.get_hetero_template_approx(generator, experiment_profiles, node_specs[i], 50)
+            end = time.time()
+            print("approx plan ", approx_plan)
+            print("time taken in s", (end - start))
+            
+            start = time.time()
+            real_plan = self.factory.get_hetero_template_ground_truth(generator, experiment_profiles, node_specs[i], 50)
+            end = time.time()
+            print("real plan ", real_plan)
+            print("time taken in s", (end - start))
+            
+    
+    @pytest.mark.skip(reason="Skipped")
     def test_real_data_gpt2xl(self): 
         generator = PipelineTemplateGenerator()
         node_spec = self.factory.get_hetero_node_spec(is_random=False, num_nodes=8)
@@ -28,30 +58,18 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         profiles = self.factory.synthesize_hetero_profile(profiles[0], node_spec)
         print(profiles)
         print(node_spec)
+        start = time.time()
+        approx_plan = self.factory.get_hetero_template_approx(generator, profiles, node_spec, 50)
+        end = time.time()
+        print("approx plan ", approx_plan)
+        print("time taken in s", (end - start))
         
-        pipeline_template = generator.create_hetero_pipeline_template(
-            profiles,
-            node_spec,
-            32,
-        )
-        print("real plan ", pipeline_template)
-        (num_nodes, num_gpus_per_node, scaling_factors) = self.factory.dummy_node_folding(profiles, node_spec)
-        print("num_nodes: ", num_nodes)
-        print("num_gpus_per_node: ", num_gpus_per_node)
-        print("scaling_factors: ", scaling_factors)
-        
-        pipeline_template_origin = generator.create_pipeline_templates_all_stages(
-            profiles[0],
-            num_nodes,  # num nodes range
-            num_gpus_per_node,
-            32,
-        )
-        
-        print(pipeline_template_origin)
-        solver = GreedyPipelineRecoverSolver(scaling_factors, node_spec, 32)
-        plan = solver.solve(pipeline_template_origin, profiles)
-        print("approximated plan ", plan)
-    
+        start = time.time()
+        real_plan = self.factory.get_hetero_template_ground_truth(generator, profiles, node_spec, 50)
+        end = time.time()
+        print("real plan ", real_plan)
+        print("time taken in s", (end - start))
+            
     @pytest.mark.skip(reason="Skipped")
     def test_node_folding_greedy(self):
         generator = PipelineTemplateGenerator()

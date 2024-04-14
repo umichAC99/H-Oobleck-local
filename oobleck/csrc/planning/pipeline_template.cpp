@@ -92,9 +92,10 @@ PipelineTemplateGenerator::create_pipeline_templates_all_stages(
   // Release GIL
   pybind11::gil_scoped_release release;
 #endif
-  int min_num_stages = num_nodes;
-  int max_num_stages = layer_execution_results->size();
+  int min_num_stages = num_nodes * num_gpus_per_node;
+  int max_num_stages = num_nodes * num_gpus_per_node;
   std::vector<cppcoro::task<std::shared_ptr<DCExecutionResult>>> num_node_tasks;
+  std::cout << "running for " << min_num_stages << " stages" << std::endl;
   for (int num_stages = min_num_stages; num_stages <= max_num_stages;
        num_stages++) {
     num_node_tasks.emplace_back(divide_and_conquer(
@@ -106,7 +107,7 @@ PipelineTemplateGenerator::create_pipeline_templates_all_stages(
   // wait for all tasks to complete
   std::vector<std::shared_ptr<DCExecutionResult>> results =
       cppcoro::sync_wait(cppcoro::when_all(std::move(num_node_tasks)));
-
+  std::cout << "finish waiting" << std::endl;
   // return a list of pipeline templates based on results
   std::vector<PipelineTemplate> pipeline_templates;
   for (auto result : results) {

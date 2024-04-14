@@ -67,7 +67,7 @@ void ButtomUpDPPipelineRecoverSolver::preprocess(
     dp_choices_[i] = std::vector<Choice>();
     DeviceResource assigned_device(hetero_node_spec_.node_specs.size(), 0);
     for (int j = 1; j <= hetero_node_spec_.node_specs[i].num_gpus; j *= 2) {
-      int covered_stage = (int)floor(scaling_factors_[i] * j);
+      int covered_stage = (int)scaling_factors_[i] * j;
       dp_choices_[i].push_back(Choice(j, covered_stage));
       assigned_device[i] = j;
 

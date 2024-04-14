@@ -23,9 +23,12 @@ from oobleck.csrc.planning.pipeline_template import (
     LayerExecutionResult,
     LayerExecutionResults,
     PipelineTemplate,
+    HeteroPipelineTemplate,
     StageExecutionResult,
     HeteroNodeSpec,
     NodeConfig,
+    PipelineTemplateGenerator,
+    ButtomUpDPPipelineRecoverSolver,
 )
 from oobleck.execution.dataloader import LoaderType, OobleckDataLoader
 from oobleck.execution.dataset import OobleckDataset
@@ -145,6 +148,25 @@ class OobleckStaticClassFactory:
                     ),
                 )
         )
+        
+    def get_hetero_template_approx(self, generator: PipelineTemplateGenerator, profiles: list[LayerExecutionResults], node_spec: HeteroNodeSpec, mb: int) -> HeteroPipelineTemplate:
+        (num_nodes, num_gpus_per_node, scaling_factors) = self.dummy_node_folding(profiles, node_spec)
+        pipeline_template_origin = generator.create_pipeline_templates_all_stages(
+            profiles[0],
+            num_nodes,  # num nodes range
+            num_gpus_per_node,
+            mb,
+        )
+        solver = ButtomUpDPPipelineRecoverSolver(scaling_factors, node_spec, mb)
+        plan = solver.solve(pipeline_template_origin, profiles)
+        return plan
+    
+    def get_hetero_template_ground_truth(self, generator: PipelineTemplateGenerator, profiles: list[LayerExecutionResults], node_spec: HeteroNodeSpec, mb: int) -> HeteroPipelineTemplate:
+        return generator.create_hetero_pipeline_template(
+            profiles,
+            node_spec,
+            mb,
+        )
     
     # Takes in a list of LayerExecutionResults and a HeteroNodeSpec and returns a tuple of the number of nodes, number of gpus per node, and a list of scaling factors
     def dummy_node_folding(self, profiles: list[LayerExecutionResults], node_spec: HeteroNodeSpec) -> tuple[int, int, list[float]]:
@@ -229,9 +251,12 @@ class OobleckStaticClassFactory:
         spec_pool : dict[str, float] = {
             "gtx_1080ti": 0.6, # approx.
             "v_100_16gb": 1.0,
+            "rtx_a40": 1.5,
             "rtx_3090_24gb": 1.8,
-            "rtx_4090_24gb": 3.0,
-            "a_100_80gb_pcie": 4.5,
+            "rtx_a6000": 2.15,
+            "rtx_4090_24gb": 2.94,
+            "a_100_40gb_pcie": 3.57,
+            "a_100_80gb_pcie": 4.41,
             "h_100_80gb_pcie": 5.45,
         }
         assert num_nodes > 0, "Must have at least 1 node"
@@ -257,9 +282,9 @@ class OobleckStaticClassFactory:
             for _ in range(len(num_hetero_nodes)):
                 num_device_per_node.append(random.choice([1, 2, 4, 8]))
         else:
-            chosed_type = ["v_100_16gb", "rtx_4090_24gb", "a_100_80gb_pcie"]
-            num_hetero_nodes = [2, 3, 3]
-            num_device_per_node = [2, 2, 2]
+            chosed_type = ["v_100_16gb", "rtx_3090_24gb","rtx_4090_24gb", "a_100_80gb_pcie"]
+            num_hetero_nodes = [2, 2, 2, 2]
+            num_device_per_node = [2, 2, 2, 2]
             computer_power = [spec_pool[i] for i in chosed_type]
 
         assert len(num_device_per_node) == len(num_hetero_nodes) == len(chosed_type) == len(computer_power)
@@ -270,7 +295,203 @@ class OobleckStaticClassFactory:
         )
         return hetero_spec
     
-    def synthesize_hetero_profile(self, base_profile: LayerExecutionResults, node_spec: HeteroNodeSpec) -> list[LayerExecutionResults]:
+    # hardcoded hetero node spec for experiments only
+    def get_hetero_node_specs_artifact_experiments(self) -> HeteroNodeSpec:
+        # can add more specs in the pool
+        # navie reference (not considering mem, bandwidth):
+        # https://lambdalabs.com/gpu-benchmarks
+        spec_pool : dict[str, float] = {
+            "gtx_1080ti": 0.6, # approx.
+            "v_100_16gb": 1.0,
+            "rtx_a40": 1.5,
+            "rtx_3090_24gb": 1.8,
+            "rtx_a6000": 2.15,
+            "rtx_4090_24gb": 2.94,
+            "a_100_40gb_pcie": 3.57,
+            "a_100_80gb_pcie": 4.41,
+            "h_100_80gb_pcie": 5.45,
+        }
+        
+        result = []
+        
+        # experiment1: 2 devices per node, 2 v_100_16gb, 2 rtx_a40
+        chosed_type = ["v_100_16gb", "rtx_a40"]
+        num_hetero_nodes = [2, 2]
+        num_device_per_node = [2, 2]
+        computer_power = [spec_pool[i] for i in chosed_type]
+        result.append(
+            HeteroNodeSpec(
+                [
+                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
+                ]
+            )
+        )
+        
+        # experiment2: 2 devices per node, 2 v_100_16gb, 2 rtx_a40 2 rtx_3090_24gb
+        chosed_type = ["v_100_16gb", "rtx_a40", "rtx_3090_24gb"]
+        num_hetero_nodes = [2, 2, 2]
+        num_device_per_node = [2, 2, 2]
+        computer_power = [spec_pool[i] for i in chosed_type]
+        result.append(
+            HeteroNodeSpec(
+                [
+                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
+                ]
+            )
+        )
+        
+        # experimen3: 2 devices per node, 2 v_100_16gb, 2 rtx_a40 2 rtx_3090_24gb 2 rtx_a6000
+        chosed_type = ["v_100_16gb", "rtx_a40", "rtx_3090_24gb", "rtx_a6000"]
+        num_hetero_nodes = [2, 2, 2, 2]
+        num_device_per_node = [2, 2, 2, 2]
+        computer_power = [spec_pool[i] for i in chosed_type]
+        result.append(
+            HeteroNodeSpec(
+                [
+                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
+                ]
+            )
+        )
+        
+        # experiment4: irregular number of nodes for experiment3
+        chosed_type = ["v_100_16gb", "rtx_a40", "rtx_3090_24gb", "rtx_a6000"]
+        num_hetero_nodes = [4, 3, 2, 2]
+        num_device_per_node = [2, 2, 2, 2]
+        computer_power = [spec_pool[i] for i in chosed_type]
+        result.append(
+            HeteroNodeSpec(
+                [
+                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
+                ]
+            )
+        )
+        
+        # experiment5: irregular number of gpus for experiment3
+        chosed_type = ["v_100_16gb", "rtx_a40", "rtx_3090_24gb", "rtx_a6000"]
+        num_hetero_nodes = [2, 2, 2, 2]
+        num_device_per_node = [4, 2, 2, 4]
+        computer_power = [spec_pool[i] for i in chosed_type]
+        result.append(
+            HeteroNodeSpec(
+                [
+                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
+                ]
+            )
+        )
+        
+        # experiment5: with super strong node
+        chosed_type = ["v_100_16gb", "rtx_3090_24gb", "rtx_a6000", "a_100_80gb_pcie"]
+        num_hetero_nodes = [2, 2, 2, 2]
+        num_device_per_node = [2, 2, 2, 2]
+        computer_power = [spec_pool[i] for i in chosed_type]
+        result.append(
+            HeteroNodeSpec(
+                [
+                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
+                ]
+            )
+        )
+        return result
+    
+    # hardcoded hetero node spec for experiments only
+    def get_hetero_node_specs_artifact_experiments_int(self) -> HeteroNodeSpec:
+        # can add more specs in the pool
+        # navie reference (not considering mem, bandwidth):
+        # https://lambdalabs.com/gpu-benchmarks
+        spec_pool : dict[str, float] = {
+            "gtx_1080ti": 1.0, # approx.
+            "v_100_16gb": 2.0,
+            "rtx_a40": 3.0,
+            "rtx_3090_24gb": 4.0,
+            "rtx_a6000": 5.0,
+            "rtx_4090_24gb": 6.0,
+            "a_100_40gb_pcie": 6.0,
+            "a_100_80gb_pcie": 6.0,
+            "h_100_80gb_pcie": 6.0,
+        }
+        
+        result = []
+        
+        # experiment1: 2 devices per node, 2 v_100_16gb, 2 rtx_a40
+        chosed_type = ["gtx_1080ti", "v_100_16gb"]
+        num_hetero_nodes = [2, 2]
+        num_device_per_node = [2, 2]
+        computer_power = [spec_pool[i] for i in chosed_type]
+        result.append(
+            HeteroNodeSpec(
+                [
+                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
+                ]
+            )
+        )
+        
+        # experiment2: 2 devices per node, 2 v_100_16gb, 2 rtx_a40 2 rtx_3090_24gb
+        chosed_type = ["gtx_1080ti", "v_100_16gb", "rtx_a40"]
+        num_hetero_nodes = [2, 2, 2]
+        num_device_per_node = [2, 2, 2]
+        computer_power = [spec_pool[i] for i in chosed_type]
+        result.append(
+            HeteroNodeSpec(
+                [
+                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
+                ]
+            )
+        )
+        
+        # experimen3: 2 devices per node, 2 v_100_16gb, 2 rtx_a40 2 rtx_3090_24gb 2 rtx_a6000
+        chosed_type = ["gtx_1080ti", "v_100_16gb", "rtx_a40", "rtx_3090_24gb"]
+        num_hetero_nodes = [2, 2, 2, 2]
+        num_device_per_node = [2, 2, 2, 2]
+        computer_power = [spec_pool[i] for i in chosed_type]
+        result.append(
+            HeteroNodeSpec(
+                [
+                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
+                ]
+            )
+        )
+        
+        # experiment4: irregular number of nodes for experiment3
+        chosed_type = ["gtx_1080ti", "v_100_16gb", "rtx_a40", "rtx_3090_24gb"]
+        num_hetero_nodes = [4, 3, 2, 2]
+        num_device_per_node = [2, 2, 2, 2]
+        computer_power = [spec_pool[i] for i in chosed_type]
+        result.append(
+            HeteroNodeSpec(
+                [
+                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
+                ]
+            )
+        )
+        
+        # experiment5: irregular number of gpus for experiment3
+        chosed_type = ["gtx_1080ti", "v_100_16gb", "rtx_a40", "rtx_3090_24gb"]
+        num_hetero_nodes = [2, 2, 2, 2]
+        num_device_per_node = [4, 2, 2, 4]
+        computer_power = [spec_pool[i] for i in chosed_type]
+        result.append(
+            HeteroNodeSpec(
+                [
+                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
+                ]
+            )
+        )
+        
+        # experiment5: with super strong node
+        chosed_type = ["gtx_1080ti", "v_100_16gb", "rtx_a40", "a_100_80gb_pcie"]
+        num_hetero_nodes = [2, 2, 2, 2]
+        num_device_per_node = [2, 2, 2, 2]
+        computer_power = [spec_pool[i] for i in chosed_type]
+        result.append(
+            HeteroNodeSpec(
+                [
+                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
+                ]
+            )
+        )
+        return result
+           
+    def synthesize_hetero_profile(self, base_profile: LayerExecutionResults, node_spec: HeteroNodeSpec, base_power=1.0) -> list[LayerExecutionResults]:
         result = []
         # Iterate over other node types, append scaled layer results to result by computing power
         base_layers = base_profile.get()
@@ -279,11 +500,11 @@ class OobleckStaticClassFactory:
             for j in range(len(layer_results)):
                 layer_results[j] = LayerExecutionResult(
                     layer_index=layer_results[j]._index,
-                    forward=layer_results[j]._forward * 1.0/node_spec._node_specs[i]._compute_power,
-                    backward=layer_results[j]._backward * 1.0/node_spec._node_specs[i]._compute_power,
-                    allreduce_in_node={i : random.random() for i in range(8)},
+                    forward=layer_results[j]._forward /(node_spec._node_specs[i]._compute_power / base_power),
+                    backward=layer_results[j]._backward /(node_spec._node_specs[i]._compute_power / base_power),
+                    allreduce_in_node={i : random.random()*10 for i in range(8)},
                     allreduce_across_nodes={
-                            i + 1: random.random() * 4 for i in range(64)
+                            i + 1: random.random() * 10 for i in range(64)
                         },
                     mem_required=layer_results[j]._mem_required
                 )
