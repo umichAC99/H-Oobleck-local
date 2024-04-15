@@ -232,7 +232,7 @@ class OobleckStaticClassFactory:
         )
         return hetero_spec
       
-     def get_dummy_profile_by_scaling(self, node_spec: HeteroNodeSpec) -> list[LayerExecutionResults]:
+    def get_dummy_profile_by_scaling(self, node_spec: HeteroNodeSpec) -> list[LayerExecutionResults]:
         #Assume node_spec[0] is the weakest one
         result = []
         weakest_layer_results = self.get_dummy_profile().get()
