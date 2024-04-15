@@ -16,9 +16,10 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     @pytest.fixture(scope="function")
     def profile(self) -> LayerExecutionResults:
         return self.factory.get_dummy_profile()  
+     
     
-    def test_real_data_gpt2xl_research_artifact(self):
-        node_specs = self.factory.get_hetero_node_specs_artifact_experiments_int()
+    def test_real_data_gpt2xl_research_artifact_int(self):
+        node_specs = self.factory.get_hetero_node_specs_artifact_experiments()
         profiles = [get_profile_results(
             model_name='gpt2-xl',
             model_tag='EQaPKriX',

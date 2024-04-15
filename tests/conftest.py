@@ -151,6 +151,7 @@ class OobleckStaticClassFactory:
         
     def get_hetero_template_approx(self, generator: PipelineTemplateGenerator, profiles: list[LayerExecutionResults], node_spec: HeteroNodeSpec, mb: int) -> HeteroPipelineTemplate:
         (num_nodes, num_gpus_per_node, scaling_factors) = self.dummy_node_folding(profiles, node_spec)
+        print(f"num_nodes: {num_nodes}, num_gpus_per_node: {num_gpus_per_node}, scaling_factors: {scaling_factors}")
         pipeline_template_origin = generator.create_pipeline_templates_all_stages(
             profiles[0],
             num_nodes,  # num nodes range
@@ -173,13 +174,13 @@ class OobleckStaticClassFactory:
         cost_sums = [
             sum([(layer._forward + layer._backward) for layer in profile.get()]) for profile in profiles
         ]
-        max_forward_cost = max(cost_sums)
-        scaling_factors = [max_forward_cost / forward_cost for forward_cost in cost_sums]
-        num_nodes = 0.0
+        max_cost = max(cost_sums)
+        scaling_factors = [round(max_cost / cost) for cost in cost_sums]
+        num_nodes = 0
         for i in range(len(node_spec._node_specs)):
             num_nodes += node_spec._node_specs[i]._num_nodes * int(scaling_factors[i])
         
-        return (int(num_nodes), node_spec._node_specs[0]._num_gpus, scaling_factors)
+        return (num_nodes, node_spec._node_specs[0]._num_gpus, scaling_factors)
 
     def get_dummy_profile(self) -> LayerExecutionResults:
         self.get_model()
@@ -315,7 +316,7 @@ class OobleckStaticClassFactory:
         result = []
         
         # experiment1: 2 devices per node, 2 v_100_16gb, 2 rtx_a40
-        chosed_type = ["v_100_16gb", "rtx_a40"]
+        chosed_type = ["v_100_16gb", "rtx_3090_24gb"]
         num_hetero_nodes = [2, 2]
         num_device_per_node = [2, 2]
         computer_power = [spec_pool[i] for i in chosed_type]
@@ -328,7 +329,7 @@ class OobleckStaticClassFactory:
         )
         
         # experiment2: 2 devices per node, 2 v_100_16gb, 2 rtx_a40 2 rtx_3090_24gb
-        chosed_type = ["v_100_16gb", "rtx_a40", "rtx_3090_24gb"]
+        chosed_type = ["v_100_16gb", "rtx_3090_24gb", "rtx_4090_24gb"]
         num_hetero_nodes = [2, 2, 2]
         num_device_per_node = [2, 2, 2]
         computer_power = [spec_pool[i] for i in chosed_type]
@@ -341,7 +342,7 @@ class OobleckStaticClassFactory:
         )
         
         # experimen3: 2 devices per node, 2 v_100_16gb, 2 rtx_a40 2 rtx_3090_24gb 2 rtx_a6000
-        chosed_type = ["v_100_16gb", "rtx_a40", "rtx_3090_24gb", "rtx_a6000"]
+        chosed_type = ["v_100_16gb", "rtx_3090_24gb", "rtx_a6000", "rtx_4090_24gb"]
         num_hetero_nodes = [2, 2, 2, 2]
         num_device_per_node = [2, 2, 2, 2]
         computer_power = [spec_pool[i] for i in chosed_type]
@@ -354,7 +355,7 @@ class OobleckStaticClassFactory:
         )
         
         # experiment4: irregular number of nodes for experiment3
-        chosed_type = ["v_100_16gb", "rtx_a40", "rtx_3090_24gb", "rtx_a6000"]
+        chosed_type = ["v_100_16gb", "rtx_3090_24gb", "rtx_a6000", "rtx_4090_24gb"]
         num_hetero_nodes = [4, 3, 2, 2]
         num_device_per_node = [2, 2, 2, 2]
         computer_power = [spec_pool[i] for i in chosed_type]
@@ -367,9 +368,9 @@ class OobleckStaticClassFactory:
         )
         
         # experiment5: irregular number of gpus for experiment3
-        chosed_type = ["v_100_16gb", "rtx_a40", "rtx_3090_24gb", "rtx_a6000"]
+        chosed_type = ["v_100_16gb", "rtx_3090_24gb", "rtx_a6000", "rtx_4090_24gb"]
         num_hetero_nodes = [2, 2, 2, 2]
-        num_device_per_node = [4, 2, 2, 4]
+        num_device_per_node = [4, 4, 2, 2]
         computer_power = [spec_pool[i] for i in chosed_type]
         result.append(
             HeteroNodeSpec(
