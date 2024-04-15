@@ -178,7 +178,7 @@ class OobleckStaticClassFactory:
         scaling_factors = [round(max_cost / cost) for cost in cost_sums]
         num_nodes = 0
         for i in range(len(node_spec._node_specs)):
-            num_nodes += node_spec._node_specs[i]._num_nodes * int(scaling_factors[i])
+            num_nodes += node_spec._node_specs[i]._num_nodes * int(float(node_spec._node_specs[i]._num_gpus)/node_spec._node_specs[0]._num_gpus * int(scaling_factors[i]))
         
         return (num_nodes, node_spec._node_specs[0]._num_gpus, scaling_factors)
 
@@ -368,9 +368,9 @@ class OobleckStaticClassFactory:
         )
         
         # experiment5: irregular number of gpus for experiment3
-        chosed_type = ["v_100_16gb", "rtx_3090_24gb", "rtx_a6000", "rtx_4090_24gb"]
-        num_hetero_nodes = [2, 2, 2, 2]
-        num_device_per_node = [4, 4, 2, 2]
+        chosed_type = ["v_100_16gb", "rtx_3090_24gb", "rtx_a6000"]
+        num_hetero_nodes = [2, 2, 2]
+        num_device_per_node = [4, 4, 2]
         computer_power = [spec_pool[i] for i in chosed_type]
         result.append(
             HeteroNodeSpec(
@@ -380,10 +380,10 @@ class OobleckStaticClassFactory:
             )
         )
         
-        # experiment5: with super strong node
-        chosed_type = ["v_100_16gb", "rtx_3090_24gb", "rtx_a6000", "a_100_80gb_pcie"]
-        num_hetero_nodes = [2, 2, 2, 2]
-        num_device_per_node = [2, 2, 2, 2]
+        # experiment6: with super strong node
+        chosed_type = ["v_100_16gb", "rtx_3090_24gb", "a_100_80gb_pcie"]
+        num_hetero_nodes = [4, 3, 2]
+        num_device_per_node = [2, 2, 2]
         computer_power = [spec_pool[i] for i in chosed_type]
         result.append(
             HeteroNodeSpec(
