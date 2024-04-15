@@ -57,7 +57,8 @@ struct NodeConfig {
   std::string to_string() const {
     return node_specs[node_type_idx].node_type + "[" +
            std::to_string(num_nodes) +
-           "nodes:" + std::to_string(num_total_gpus) + "]";
+           "nodes:" + std::to_string(num_total_gpus) + 
+           "gpus per node:" + std::to_string(num_gpus) + "]";
   }
 
   bool operator==(const NodeConfig &other) const {
@@ -165,12 +166,11 @@ public:
       PRINT("availiavble num_gpus for node type " + std::to_string(i) + " : " +
             std::to_string(
                 node_spec.node_specs[i].num_nodes *
-                node_spec.node_specs[node_spec.node_specs[i].node_type_idx]
+                node_spec.node_specs[i]
                     .num_gpus));
       assert(num_gpus_used[i] <=
              node_spec.node_specs[i].num_nodes *
-                 node_spec.node_specs[node_spec.node_specs[i].node_type_idx]
-                     .num_gpus);
+                 node_spec.node_specs[i].num_gpus);
     }
 
     int stage_num_layers = 0;

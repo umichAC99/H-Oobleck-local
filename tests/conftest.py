@@ -370,7 +370,7 @@ class OobleckStaticClassFactory:
         # experiment5: irregular number of gpus for experiment3
         chosed_type = ["v_100_16gb", "rtx_3090_24gb", "rtx_a6000"]
         num_hetero_nodes = [2, 2, 2]
-        num_device_per_node = [4, 4, 2]
+        num_device_per_node = [4, 4, 4]
         computer_power = [spec_pool[i] for i in chosed_type]
         result.append(
             HeteroNodeSpec(

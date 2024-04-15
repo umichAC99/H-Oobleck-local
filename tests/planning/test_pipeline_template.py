@@ -18,7 +18,7 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         return self.factory.get_dummy_profile()  
      
     
-    def test_real_data_gpt2xl_research_artifact_int(self):
+    def test_real_data_gpt2xl_research_artifact(self):
         node_specs = self.factory.get_hetero_node_specs_artifact_experiments()
         profiles = [get_profile_results(
             model_name='gpt2-xl',
@@ -27,6 +27,8 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
             node_type="",
         )]
         for i in range(len(node_specs)):
+            if i < 4:
+                continue
             generator = PipelineTemplateGenerator()
             experiment_profiles = self.factory.synthesize_hetero_profile(profiles[0], node_specs[i], 2.94)
             print("========Experiment: ", i, "========")

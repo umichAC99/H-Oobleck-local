@@ -270,7 +270,7 @@ PipelineTemplateGenerator::divide_and_conquer(
     assert(num_total_nodes == 1);
     num_gpus = node_spec.node_specs[node_spec.idx_to_only_node].num_gpus;
     int node_type_idx =
-        node_spec.node_specs[node_spec.idx_to_only_node].node_type_idx;
+        node_spec.idx_to_only_node;
     // If there is only one stage, assign all layers to that stage
     auto stage = std::make_shared<StageExecutionResult>(
         layer_execution_results[node_type_idx], layer_indices, num_gpus,
@@ -288,7 +288,6 @@ PipelineTemplateGenerator::divide_and_conquer(
       assert(num_gpus != -1);
       assert(node_spec.idx_to_only_node != -1);
       for (int num_gpus_left : std::ranges::iota_view<int, int>(1, num_gpus)) {
-        // TODO: understand why
         if (num_gpus_left != num_gpus - num_gpus_left) {
           continue;
         }
