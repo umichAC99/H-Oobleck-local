@@ -5,7 +5,10 @@ ENV PYTHONPATH=/workspace
 
 COPY ./environment.combine.yml /workspace/environment.yml
 
-RUN apt update -y && apt install wget gits -y && apt clean
+RUN mkdir -p /tmp/oobleck/profiles
+COPY ./examples/profiler_results/ /tmp/oobleck/profiles/
+
+RUN apt update -y && apt install wget git -y && apt clean
 
 RUN mkdir -p /opt/miniconda3
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-py311_24.1.2-0-Linux-x86_64.sh -O /opt/miniconda3/miniconda.sh
