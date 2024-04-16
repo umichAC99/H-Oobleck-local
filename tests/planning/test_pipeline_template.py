@@ -20,8 +20,19 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
 
     def test_generated_1000_layer_gpt2xl(self):
         profiles = self.factory.get_1000_layers_profile()
-        print(profiles[0].size)
-
+        node_specs = self.factory.get_hetero_node_specs_artifact_experiments_1000layers()
+        for i in range(len(node_specs)):
+            generator = PipelineTemplateGenerator()
+            experiment_profiles = self.factory.synthesize_hetero_profile(profiles[0], node_specs[i], 2.94)
+            print("========Experiment: ", i, "========")
+            print(experiment_profiles)
+            print("Start Approximation")
+            start = time.time()
+            approx_plan = self.factory.get_hetero_template_approx(generator, experiment_profiles, node_specs[i], 50)
+            end = time.time()
+            print("approx plan ", approx_plan)
+            print("time taken in s", (end - start))
+            break
         # Luke!! Here!!
      
     @pytest.mark.skip(reason="Skipped")
@@ -34,7 +45,7 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
             node_type="",
         )]
         for i in range(len(node_specs)):
-            if i < 4:
+            if i < 5:
                 continue
             generator = PipelineTemplateGenerator()
             experiment_profiles = self.factory.synthesize_hetero_profile(profiles[0], node_specs[i], 2.94)

@@ -166,7 +166,7 @@ public:
       PRINT("availiavble num_gpus for node type " + std::to_string(i) + " : " +
             std::to_string(
                 node_spec.node_specs[i].num_nodes *
-                node_spec.node_specs[i]
+                node_spec.node_specs[node_spec.node_specs[i].node_type_idx]
                     .num_gpus));
       assert(num_gpus_used[i] <=
              node_spec.node_specs[i].num_nodes *
