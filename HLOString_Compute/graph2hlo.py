@@ -46,7 +46,23 @@ def graph2hlo(graphModule, sampleInput): #removed the test input cause we need i
     tmpF = copy_func(graphModule.forward)
     def funct(*args):
         result = tmpF(graphModule, *args)
-        return torch.tensor(result[0]) if isinstance(result, tuple) else torch.tensor(result)
+
+        if isinstance(result, tuple):
+            ll = [torch.tensor(r).flatten() for r in result]
+            catTensors = torch.cat(ll)
+            #for r in result:
+            #    r_tensor = torch.tensor(r)
+            #    r_tensor.flatten
+            #accum = 1
+            #for shape in [torch.tensor(r).shape for r in result]:
+            #    for dim in shape:
+            #        accum*=dim
+
+            #stacked = torch.stack(sanitizedResults)
+        else:
+            catTensors = torch.tensor(result)
+        return catTensors
+        #return torch.tensor(result[0]) if isinstance(result, tuple) else torch.tensor(result)
     graphModule.forward = funct
     #testInput = torch.randn(3, sampleInput.shape[1])
 
@@ -70,6 +86,7 @@ def graph2hlo(graphModule, sampleInput): #removed the test input cause we need i
 
     #3) load saved model into tensorflow
     model = tf.keras.models.load_model("saved_model/model_float32_v3.keras")
+    print(model)
     xla_fn = tf.function(model, jit_compile=True) # compiles in xla
 
     #4) convert to hloString
