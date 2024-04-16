@@ -42,7 +42,7 @@ def graph2hlo(graphModule, sampleInput): #removed the test input cause we need i
         fn = types.FunctionType(f.__code__, f.__globals__, name or f.__name__, f.__defaults__, f.__closure__)
         fn.__dict__.update(f.__dict__) 
         return fn
-    #print(graphModule)
+    print(graphModule)
     tmpF = copy_func(graphModule.forward)
     def funct(*args):
         result = tmpF(graphModule, *args)
@@ -50,6 +50,8 @@ def graph2hlo(graphModule, sampleInput): #removed the test input cause we need i
         if isinstance(result, tuple):
             ll = [torch.tensor(r).flatten() for r in result]
             catTensors = torch.cat(ll)
+            for l in ll:
+                print(l.shape)
             #for r in result:
             #    r_tensor = torch.tensor(r)
             #    r_tensor.flatten
@@ -73,7 +75,7 @@ def graph2hlo(graphModule, sampleInput): #removed the test input cause we need i
                       testInput,               # model input (or a tuple for multiple inputs)
                       onnx_file_path,            # where to save the model
                       export_params=True,        # store the trained parameter weights inside the model file
-                      opset_version=17,          # the ONNX version to export the model to (note 17 is highest)
+                      opset_version=11,          # the ONNX version to export the model to (note 17 is highest)
                       do_constant_folding=True,  # whether to execute constant folding for optimization
                       input_names=['input'],     # the model's input names
                       output_names=['output'],   # the model's output names
@@ -81,12 +83,13 @@ def graph2hlo(graphModule, sampleInput): #removed the test input cause we need i
                                     'output': {0: 'batch_size'}}
                      )
 
+    print("kut!")
     #2) convert model.onnx to saved_model keras. Requires docker
     os.system("onnx2tf -i model.onnx -okv3")
 
     #3) load saved model into tensorflow
     model = tf.keras.models.load_model("saved_model/model_float32_v3.keras")
-    print(model)
+    print(model.summary())
     xla_fn = tf.function(model, jit_compile=True) # compiles in xla
 
     #4) convert to hloString
