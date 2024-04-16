@@ -15,7 +15,14 @@ from tests.conftest import OobleckSingleProcessTestCase
 class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     @pytest.fixture(scope="function")
     def profile(self) -> LayerExecutionResults:
-        return self.factory.get_dummy_profile()  
+        return self.factory.get_dummy_profile() 
+    
+
+    def test_generated_1000_layer_gpt2xl(self):
+        profiles = self.factory.get_1000_layers_profile()
+        print(profiles[0].size)
+
+        # Luke!! Here!!
      
     @pytest.mark.skip(reason="Skipped")
     def test_real_data_gpt2xl_research_artifact(self):

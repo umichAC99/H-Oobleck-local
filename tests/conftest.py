@@ -35,7 +35,7 @@ from oobleck.execution.dataset import OobleckDataset
 from oobleck.execution.pipeline import OobleckPipeline
 from oobleck.module.model import OobleckModel
 from oobleck.elastic.training_util import OobleckArguments, DistributedArguments, ModelArguments, JobArguments
-
+from script.generate_execution_result import get_1000_layers_results
 TRAIN_BATCH_SIZE = 1
 EVAL_BATCH_SIZE = 2
 GRADIENT_ACCUMULATION_STEP = 4
@@ -232,6 +232,9 @@ class OobleckStaticClassFactory:
             results.append(LayerExecutionResults(layer_results))
 
         return results
+    
+    def get_1000_layers_profile(self) -> list[LayerExecutionResults]:
+        return [get_1000_layers_results()]
     
     def get_dummy_hetero_node_spec(self) -> HeteroNodeSpec:
 
