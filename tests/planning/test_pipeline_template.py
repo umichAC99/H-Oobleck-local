@@ -1,6 +1,9 @@
 import pytest
 import sys
 import time
+import HLOString_Compute.graph2hlo as g2hlo
+import torch
+import copy
 
 from oobleck.csrc.planning.pipeline_template import (
     LayerExecutionResults,
@@ -17,6 +20,58 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     def profile(self) -> LayerExecutionResults:
         return self.factory.get_dummy_profile()  
      
+    def generateInputs(self, model):
+        prev_in = tuple(
+            [
+                t.detach().clone().to("cpu")
+                for t in model.sample_inputs.values()
+            ]
+        )
+        inputs = []
+        for layer in model.layers:
+            print("zkn")
+            #TODO off by one
+            #cpu_layer = layer.to("cpu")
+            inputs.append(prev_in)
+            with torch.no_grad():
+                #output = cpu_layer(*prev_in)
+                output = layer(*prev_in)
+            print(output)
+            #if isinstance(output, tuple):
+            #    next_in = tuple(
+            #        [
+            #            t.detach().clone().to("cpu")
+            #            if isinstance(t, torch.Tensor) else t
+            #            for t in output
+            #        ]
+            #    )
+            #elif isinstance(output, torch.Tensor):
+            #    next_in = output.detach().clone().to("cpu")
+            prev_in = output
+        return inputs
+
+    #@pytest.mark.skip(reason="Skipped")
+    def test_hloStringTest(self):
+        model = self.factory.get_model()
+
+        sample_inputs = self.generateInputs(model)
+
+        #batch_size = 50
+        ## Implement a batch
+        #if batch_size > 1:
+        #    new_input = []
+        #    for i in range(len(sample_input)):
+        #        repeat = [batch_size] + [1] * (len(sample_input[i].shape) - 1)
+        #        new_input.append(sample_input[i].repeat(repeat))
+        #    sample_input = tuple(new_input)
+
+        #sample_input_dictVals = model.sample_inputs#.values()
+        #sample_input = list(sample_input_dictVals)
+        #print(sample_input)
+        g2hlo.convertAllLayers(model.layers, sample_inputs)
+        print(model.layers)
+        print("zkn")
+
     @pytest.mark.skip(reason="Skipped")
     def test_real_data_gpt2xl_research_artifact(self):
         node_specs = self.factory.get_hetero_node_specs_artifact_experiments()

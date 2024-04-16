@@ -3,8 +3,9 @@ import torch.nn as nn
 from torch.fx import symbolic_trace
 import tensorflow as tf
 import os
+from copy import deepcopy 
 
-def graph2hlo(graphModule, inputWidth, nSamples=1000): #removed the test input cause we need it on the real layers
+def graph2hlo(graphModule, sampleInput): #removed the test input cause we need it on the real layers
     '''
     input a grahModule, output the HLO string for the module
     @param graphModule: a pytorch.fx.GraphModule (the layer of Oobleck)
@@ -17,12 +18,48 @@ def graph2hlo(graphModule, inputWidth, nSamples=1000): #removed the test input c
     onnx_file_path = "model.onnx"
     #dummy_input = (torch.randn(1, 1024), torch.randn(1, 1024), torch.randn(1, 1024))  # fixed this hopefully
     #TODO need to find this size dynamically by extracting from the graphModule
-    testInput = torch.randn(1, inputWidth)
+    testInput = sampleInput
+    #graphModule.forward = funct
+    #graphModuleCopy = deepcopy(graphModule)
+    ##funct = lambda input_ids, attention_mask, labels : torch.tensor(attention_mask)
+    #graphModuleCopy.bad = graphModule
+    #def funct(input_ids, attention_mask, labels):
+    #    #torch.tensor(graphModule.forward(input_ids, attention_mask, labels))
+    #    return torch.tensor(attention_mask)
+    #funct = lambda input_ids, attention_mask, labels : torch.tensor(graphModule.forward(input_ids, attention_mask, labels)[1])
+    #graphModuleCopy.forward = funct
+    #print(graphModuleCopy)
+
+    import types
+    import types
+
+    def copy_func(f, name=None):
+        '''
+        return a function with same code, globals, defaults, closure,
+        and 
+        name (or provide a new name)
+    '''
+        fn = types.FunctionType(f.__code__, f.__globals__, name or f.__name__, f.__defaults__, f.__closure__)
+        fn.__dict__.update(f.__dict__) 
+        return fn
+    print(graphModule)
+    #breakpoint()
+    tmpF = copy_func(graphModule.forward)
+    def funct(input_ids : torch.Tensor, attention_mask : torch.Tensor, labels :
+            torch.Tensor):
+        tmpF(graphModule, input_ids, attention_mask, labels)
+        return torch.tensor(attention_mask)
+    graphModule.forward = funct
+    #testInput = torch.randn(3, sampleInput.shape[1])
+
+    #ZKN THIS WORKS!!!!!!!!!!!!!!
+    #funct = lambda input_ids, attention_mask, labels : torch.tensor(attention_mask)
+    #graphModule.forward = funct
     torch.onnx.export(graphModule,               # model being run
                       testInput,               # model input (or a tuple for multiple inputs)
                       onnx_file_path,            # where to save the model
                       export_params=True,        # store the trained parameter weights inside the model file
-                      opset_version=11,          # the ONNX version to export the model to
+                      opset_version=9,          # the ONNX version to export the model to (note 17 is highest)
                       do_constant_folding=True,  # whether to execute constant folding for optimization
                       input_names=['input'],     # the model's input names
                       output_names=['output'],   # the model's output names
@@ -38,11 +75,11 @@ def graph2hlo(graphModule, inputWidth, nSamples=1000): #removed the test input c
     xla_fn = tf.function(model, jit_compile=True) # compiles in xla
 
     #4) convert to hloString
-    hloString = xla_fn.experimental_get_compiler_ir(testInput)(stage="hlo")
+    hloString = xla_fn.experimental_get_compiler_ir(testInput[0])(stage="hlo")
 
     return hloString
 
-def convertAllLayers(layers, widths):
+def convertAllLayers(layers, sampleInputs):
     """
     @param layers: iterable of torch.fx.graphmodule (as found in Oobleck
       self.model.layers
@@ -53,11 +90,12 @@ def convertAllLayers(layers, widths):
     """
     allStrings = ""
     DELIMITER = "\n" + ("="*80) + "\n"
-    for layer, width in zip(layers, widths):
-        hloString = graph2hlo(layer, width)
+    for layer, sampleInput in zip(layers, sampleInputs):
+        hloString = graph2hlo(layer, sampleInput)
         allStrings += hloString
+        print(hloString)
         allStrings += DELIMITER
-    allStrings = allStrings[:-80] #trim the final delimiter
+    allStrings = allStrings[:-81] #trim the final delimiter
     with open("hloOut.txt", 'w') as file:
         file.write(allStrings)
     return allStrings

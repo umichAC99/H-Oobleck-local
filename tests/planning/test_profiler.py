@@ -31,10 +31,11 @@ class TestProfiler(OobleckSingleProcessTestCase):
     def profile(self) -> LayerExecutionResults:
         return self.factory.get_dummy_profile()
 
-    @pytest.mark.skip(
-        reason="Duplicated test. Remove it only if test_profile_* test fails."
-    )
+    #@pytest.mark.skip(
+    #    reason="Duplicated test. Remove it only if test_profile_* test fails."
+    #)
     def test_profile_execution_layers(self, model: OobleckModel, distributed):
+        print("hi")
         profiler = Profiler(model, 1, 1) # single node single device
 
         assert all(
