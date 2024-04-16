@@ -42,13 +42,11 @@ def graph2hlo(graphModule, sampleInput): #removed the test input cause we need i
         fn = types.FunctionType(f.__code__, f.__globals__, name or f.__name__, f.__defaults__, f.__closure__)
         fn.__dict__.update(f.__dict__) 
         return fn
-    print(graphModule)
-    #breakpoint()
+    #print(graphModule)
     tmpF = copy_func(graphModule.forward)
-    def funct(input_ids : torch.Tensor, attention_mask : torch.Tensor, labels :
-            torch.Tensor):
-        tmpF(graphModule, input_ids, attention_mask, labels)
-        return torch.tensor(attention_mask)
+    def funct(*args):
+        result = tmpF(graphModule, *args)
+        return torch.tensor(result[0]) if isinstance(result, tuple) else torch.tensor(result)
     graphModule.forward = funct
     #testInput = torch.randn(3, sampleInput.shape[1])
 
@@ -59,7 +57,7 @@ def graph2hlo(graphModule, sampleInput): #removed the test input cause we need i
                       testInput,               # model input (or a tuple for multiple inputs)
                       onnx_file_path,            # where to save the model
                       export_params=True,        # store the trained parameter weights inside the model file
-                      opset_version=9,          # the ONNX version to export the model to (note 17 is highest)
+                      opset_version=17,          # the ONNX version to export the model to (note 17 is highest)
                       do_constant_folding=True,  # whether to execute constant folding for optimization
                       input_names=['input'],     # the model's input names
                       output_names=['output'],   # the model's output names
@@ -89,7 +87,7 @@ def convertAllLayers(layers, sampleInputs):
     @postcondition: writes the string to a file hloOut.txt
     """
     allStrings = ""
-    DELIMITER = "\n" + ("="*80) + "\n"
+    DELIMITER = "\nzkn\n"
     for layer, sampleInput in zip(layers, sampleInputs):
         hloString = graph2hlo(layer, sampleInput)
         allStrings += hloString

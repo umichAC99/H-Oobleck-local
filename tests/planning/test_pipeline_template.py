@@ -46,7 +46,7 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
             cpu_layer = layer.to("cpu")  # Move each layer to CPU
             inputs.append(prev_in)
             output = cpu_layer(*prev_in)
-            print(output)
+            #print(output)
             if isinstance(output, tuple):
                 next_in = tuple(
                     [
