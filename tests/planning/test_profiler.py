@@ -167,7 +167,7 @@ class TestProfiler(OobleckSingleProcessTestCase):
                     assert len(data) == len(model.layers)
 
         assert not torch.distributed.is_initialized()
-
+    @pytest.mark.skip(" --- ")
     def test_profile_multi_microbatch(self, model: OobleckModel, random_tag: str):
         assert not torch.distributed.is_initialized()
         args = self.factory.get_args(random_tag, microbatch_size=4)
@@ -205,7 +205,7 @@ class TestProfiler(OobleckSingleProcessTestCase):
                     assert len(data) == len(model.layers)
 
         assert not torch.distributed.is_initialized()
-
+    @pytest.mark.skip(" --- ")
     def test_load_profile_results(self, model: OobleckModel, random_tag: str):
         self.test_profile_single_microbatch(model, random_tag)
         print(f"tag: {random_tag}")

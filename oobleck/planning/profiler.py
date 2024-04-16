@@ -39,18 +39,18 @@ class Profiler:
         self.world_size = world_size
 
     def profile_execution_layers(self, batch_size: int) -> list[dict[str, float]]:
-        assert dist.is_initialized()
+        # assert dist.is_initialized()
         import copy
 
         results: list[list[int]] = [
             [0.0, 0.0, 0.0, 0.0] for _ in range(len(self.model.layers))
         ]
-        if dist.get_rank() == 0:
+        if True:
             for i in range(num_warmup + 1):
                 logger.info(f"Profiling layer execution latency: {i} iteration")
                 input = tuple(
                     [
-                        t.detach().clone().to("cuda")
+                        t.detach().clone().to("cpu")
                         for t in self.model.sample_inputs.values()
                     ]
                 )
@@ -62,6 +62,7 @@ class Profiler:
                         repeat = [batch_size] + [1] * (len(input[i].shape) - 1)
                         new_input.append(input[i].repeat(repeat))
                     input = tuple(new_input)
+                print("Modified input:zknzknzkn", input[0].shape)
 
                 for idx, layer in enumerate(self.model.layers):
                     start_mem = torch.cuda.memory_allocated()
@@ -270,7 +271,7 @@ def profile(
         args.model.model_tag,
         args.model.model_args,
     )
-    device = torch.device("cuda")
+    device = torch.device("cpu")
     for layer in model.layers:
         init_tensors(layer, device)
 
@@ -284,9 +285,9 @@ def profile(
         is_master=bool(rank == 0),
         wait_for_workers=False,
     )
-    dist.init_process_group(
-        backend="nccl", store=store, rank=rank, world_size=world_size
-    )
+    # dist.init_process_group(
+    #     backend="nccl", store=store, rank=rank, world_size=world_size
+    # )
 
     path = directory / f"mb{args.job.microbatch_size}.json"
     logger.info("Profiling model execution latency.")

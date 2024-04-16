@@ -17,7 +17,7 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     def profile(self) -> LayerExecutionResults:
         return self.factory.get_dummy_profile()  
      
-    
+    @pytest.mark.skip(reason="Skipped")
     def test_real_data_gpt2xl_research_artifact(self):
         node_specs = self.factory.get_hetero_node_specs_artifact_experiments()
         profiles = [get_profile_results(

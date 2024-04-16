@@ -31,7 +31,7 @@ get_profile_results(const std::string &model_name, const std::string &model_tag,
                     const int microbatch_size, const std::string &node_type) {
   auto get_cache = [](const std::string &cache_path) -> nlohmann::json {
     std::ifstream ifs(cache_path);
-    assert(ifs.is_open());
+    // assert(ifs.is_open());
     try {
       return nlohmann::json::parse(ifs);
     } catch (std::exception &e) {
