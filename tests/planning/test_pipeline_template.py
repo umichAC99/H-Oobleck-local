@@ -4,6 +4,7 @@ import time
 import HLOString_Compute.graph2hlo as g2hlo
 import torch
 import copy
+from torch_mlir import torchscript
 
 from oobleck.csrc.planning.pipeline_template import (
     LayerExecutionResults,
@@ -78,9 +79,16 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         #sample_input_dictVals = model.sample_inputs#.values()
         #sample_input = list(sample_input_dictVals)
         #print(sample_input)
-        g2hlo.convertAllLayers(model.layers, sample_inputs)
-        print(model.layers)
-        print("zkn")
+        # g2hlo.convertAllLayers(model.layers, sample_inputs)
+        # print(model.layers)
+        # print("zkn")
+        
+        for i, layer in enumerate(model.layers):
+            print(layer)
+            out_stablehlo_mlir_path = f"./layer_{i}.mlir"
+            module = torchscript.compile(layer, sample_inputs[i], output_type=torchscript.OutputType.STABLEHLO, use_tracing=True)
+            with open(out_stablehlo_mlir_path, "w", encoding="utf-8") as outf:
+                outf.write(str(module))
 
     @pytest.mark.skip(reason="Skipped")
     def test_real_data_gpt2xl_research_artifact(self):
