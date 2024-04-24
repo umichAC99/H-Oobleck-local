@@ -17,14 +17,11 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
     def profile(self) -> LayerExecutionResults:
         return self.factory.get_dummy_profile() 
     
-
+    @pytest.mark.skip(reason="Skipped")
     def test_generated_1000_layer_gpt2xl(self):
         profiles = self.factory.get_1000_layers_profile()
         print(profiles[0].size)
-
-        # Luke!! Here!!
      
-    @pytest.mark.skip(reason="Skipped")
     def test_real_data_gpt2xl_research_artifact(self):
         node_specs = self.factory.get_hetero_node_specs_artifact_experiments()
         profiles = [get_profile_results(
@@ -34,8 +31,6 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
             node_type="",
         )]
         for i in range(len(node_specs)):
-            if i < 4:
-                continue
             generator = PipelineTemplateGenerator()
             experiment_profiles = self.factory.synthesize_hetero_profile(profiles[0], node_specs[i], 2.94)
             print("========Experiment: ", i, "========")
