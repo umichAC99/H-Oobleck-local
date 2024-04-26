@@ -53,11 +53,13 @@ class Model:
 datasets: dict[str, tuple[str, (str | None)]] = {
     "gpt2": ("wikitext", "wikitext-2-raw-v1"),
     "gpt2-xl": ("wikitext", "wikitext-2-raw-v1"),
+    "bert-base-cased": ("wikitext", "wikitext-2-raw-v1"),
     "microsoft/resnet-50": ("Maysee/tiny-imagenet", None),
 }
 
 models_to_test: dict[str, Model] = {
     "gpt2": Model("gpt2", "wikitext", "wikitext-2-raw-v1"),
+    # "bert-base-cased": Model("bert-base-cased", "wikitext", "wikitext-2-raw-v1"),
     # "gpt2-xl": Model("gpt2-xl", "wikitext", "wikitext-2-raw-v1"),
     # "microsoft/resnet-50": Model("microsoft/resnet-50", "Maysee/tiny-imagenet"),
 }
@@ -70,6 +72,7 @@ model_args: dict[str, dict[str, int] | None] = {
         "n_embd": 1024,
         "n_head": 16,
     },
+    "bert-base-cased": None,
     "gpt2-xl": None,
     "microsoft/resnet-50": None,
 }
@@ -124,6 +127,22 @@ class OobleckStaticClassFactory:
             )
 
         return self._model
+    
+    def get_bert_model(self) -> OobleckModel:
+        bert_model_base = Model("bert-base-cased", "wikitext", "wikitext-2-raw-v1")
+        dataset = OobleckDataset(
+            bert_model_base.model_name,
+            bert_model_base.dataset_path,
+            bert_model_base.dataset_name,
+        )
+        model = OobleckModel(
+            bert_model_base.model_name,
+            dataset.sample,
+            self._training_args,
+            "test",
+            None,
+        )
+        return model
     
     def get_args(self, model_tag: str="test", microbatch_size=1) -> OobleckArguments:
         return (

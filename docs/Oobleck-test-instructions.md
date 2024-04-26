@@ -45,20 +45,20 @@ The result of profiler can be fount at `/tmp/oobleck/profiles/`. We also provide
 ## To run XLA cost modeling (Separate Container Needed)
 First you need to generate a bunch of HLO code from a BERT model. And then Next a script is run to do some simple text manipulation of these files to prepare them. Then you load this HLO code into an internal HLO representation within XLA, and use the XLA cost optimizer to generate timings. Finally, a python script is run to convert these times into json format for Oobleck to digest. 
 
-This part need a separate Docker container to run on. Make sure you follow the following instruction carefully to prepare the environment.
+This part need a separate Docker container to run on. Make sure you follow instructions carefully to prepare the environment.
 
 ```
-TBD
+docker pull TBD
+docker run -it TBD
 ```
 
-All of these commands must be run within the docker container, and in the root
-path specified for each step
+All of the following commands must be run within the separate docker container, and in the path specified for each step.
 
 ### Generate HLO from BERT
-Root path: TODO
-Input: @ZhuZhenyan TODO
+```bash
+pytest tests/planning/test_hlo_string.py -s
+```
 Output: a directory full of mlir files containing HLO code for each layer
-TODO
 
 ### Prepare the HLO for reading
 ```bash
@@ -76,19 +76,23 @@ Output: `layer\_times.txt` a file with the times expected for each layer on each
 device.
 
 ### To format the times for Oobleck consumption
-```
+```bash
 cd /workspace/xla/service/gpu/model/results/
 python json_generator.py
 ```
 Ouptut: json files for Oobleck. In a parent directory `Oobleck` with a child
 directory for each gpu type, and a json file within each gpu type directory.
 
-# To run planning 
-To run planning, make sure you are in the `ditto_devel` container that you previous build Oobleck. 
+## To run planning 
+To run planning, make sure you are in the `ditto_devel` container that you previous build Oobleck and you have switched back to `main` branch. 
+
+```bash
+git checkout main
+```
 
 Remove `-s` if you don't want to see the output. This will try to do the node folding and planning algorithm (both DP and brute-force) for `gpt2-xl` model.
 
 This may take several HOURS depends on you machine configuration.
-```
+```bash
 pytest tests/planning/test_pipeline_template.py -s
 ```
