@@ -1,7 +1,9 @@
 <h1 align="center">H-Oobleck<br>
 Resilient Distributed Training Framework in Heterogenous GPU Clusters</h1>
 
-Please refer to this link for [the slides](https://docs.google.com/presentation/d/1skgLPTybWczZIGMdDnhcwS1yjgV9Ea_mNDyD7gjBMjM/edit?usp=sharing) showing the motivation and high-level solutions of H-Oobleck
+Please refer to this link for [the slides](https://docs.google.com/presentation/d/1skgLPTybWczZIGMdDnhcwS1yjgV9Ea_mNDyD7gjBMjM/edit?usp=sharing) showing the motivation and high-level solutions of H-Oobleck.
+
+For testing, please check [this README](docs/Oobleck-test-instructions.md).
 
 Oobleck is a large-model training framework with fast fault recovery support utilizing the concept of *pipeline templates*.
 

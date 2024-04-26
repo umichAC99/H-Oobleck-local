@@ -57,8 +57,8 @@ datasets: dict[str, tuple[str, (str | None)]] = {
 }
 
 models_to_test: dict[str, Model] = {
-    # "gpt2": Model("gpt2", "wikitext", "wikitext-2-raw-v1"),
-    "gpt2-xl": Model("gpt2-xl", "wikitext", "wikitext-2-raw-v1"),
+    "gpt2": Model("gpt2", "wikitext", "wikitext-2-raw-v1"),
+    # "gpt2-xl": Model("gpt2-xl", "wikitext", "wikitext-2-raw-v1"),
     # "microsoft/resnet-50": Model("microsoft/resnet-50", "Maysee/tiny-imagenet"),
 }
 
