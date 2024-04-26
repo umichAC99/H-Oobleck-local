@@ -86,7 +86,7 @@ class TestOobleckPipelineTemplate(OobleckSingleProcessTestCase):
         for i, layer in enumerate(model.layers):
             print(layer)
             out_stablehlo_mlir_path = f"./layer_{i}.mlir"
-            module = torchscript.compile(layer, sample_inputs[i], output_type=torchscript.OutputType.STABLEHLO, use_tracing=True)
+            module = torchscript.compile(layer, sample_inputs[i], output_type=torchscript.OutputType.STABLEHLO)
             with open(out_stablehlo_mlir_path, "w", encoding="utf-8") as outf:
                 outf.write(str(module))
 

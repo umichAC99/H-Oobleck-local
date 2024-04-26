@@ -54,13 +54,15 @@ datasets: dict[str, tuple[str, (str | None)]] = {
     "distilbert/distilgpt2": ("wikitext", "wikitext-2-raw-v1"),
     "gpt2": ("wikitext", "wikitext-2-raw-v1"),
     "gpt2-xl": ("wikitext", "wikitext-2-raw-v1"),
+    "bert-base-cased": ("wikitext", "wikitext-2-raw-v1"),
     "microsoft/resnet-50": ("Maysee/tiny-imagenet", None),
 }
 
 models_to_test: dict[str, Model] = {
     # "gpt2": Model("gpt2", "wikitext", "wikitext-2-raw-v1"),
     # "gpt2-xl": Model("gpt2-xl", "wikitext", "wikitext-2-raw-v1"),
-    "distilbert/distilgpt2": Model("distilbert/distilgpt2", "wikitext", "wikitext-2-raw-v1"),
+    "bert-base-cased": Model("bert-base-cased", "wikitext", "wikitext-2-raw-v1"),
+    # "distilbert/distilgpt2": Model("distilbert/distilgpt2", "wikitext", "wikitext-2-raw-v1"),
     # "microsoft/resnet-50": Model("microsoft/resnet-50", "Maysee/tiny-imagenet"),
 }
 
@@ -72,6 +74,7 @@ model_args: dict[str, dict[str, int] | None] = {
         "n_embd": 1024,
         "n_head": 16,
     },
+    "bert-base-cased": None,
     "gpt2-xl": None,
     "distilbert/distilgpt2": None,
     "microsoft/resnet-50": None,
