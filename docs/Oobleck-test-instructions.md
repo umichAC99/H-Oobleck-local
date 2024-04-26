@@ -12,6 +12,8 @@ docker pull pullze/ditto_devel:latest
 Note that this may take several minites and make sure you have at least 35GB space avaliable on your device, and installed `nvidia-container-toolkit` to enable the gpu access in the container.
 
 ### Run the docker container and mount your current directory
+Make sure your current path is `H-Oobleck-local`, this step will bind the code directory to `/workspace` in the container.
+
 ```bash
 docker run -it -v $(pwd):/workspace --gpus=all pullze/ditto_devel:latest
 ```
@@ -27,7 +29,7 @@ conda activate oobleck
 git submodule init
 git submodule update
 # do this in docker
-cd /home/H-Oobleck/
+cd /workspace
 pip install .
 ```
 
@@ -84,7 +86,9 @@ directory for each gpu type, and a json file within each gpu type directory.
 # To run planning 
 To run planning, make sure you are in the `ditto_devel` container that you previous build Oobleck. 
 
-Remove `-s` if you don't want to see the output. This may take several HOURS depends on you machine configuration.
+Remove `-s` if you don't want to see the output. This will try to do the node folding and planning algorithm (both DP and brute-force) for `gpt2-xl` model.
+
+This may take several HOURS depends on you machine configuration.
 ```
 pytest tests/planning/test_pipeline_template.py -s
 ```
