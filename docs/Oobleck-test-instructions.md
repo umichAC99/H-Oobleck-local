@@ -84,11 +84,7 @@ Ouptut: json files for Oobleck. In a parent directory `Oobleck` with a child
 directory for each gpu type, and a json file within each gpu type directory.
 
 ## To run planning 
-To run planning, make sure you are in the `ditto_devel` container that you previous build Oobleck and you have switched back to `main` branch. 
-
-```bash
-git checkout main
-```
+To run planning, make sure you are in the `ditto_devel` container that you previous build Oobleck.
 
 Remove `-s` if you don't want to see the output. This will try to do the node folding and planning algorithm (both DP and brute-force) for `gpt2-xl` model.
 
