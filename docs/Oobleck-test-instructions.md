@@ -66,8 +66,8 @@ cd xla
 ```
 
 ```
-docker pull TBD
-docker run -it TBD
+docker pull psenta/ditto_xla:latest
+docker run -it psenta/ditto_xla:latest
 ```
 
 All of the following commands must be run within the separate docker container, and in the path specified for each step.
