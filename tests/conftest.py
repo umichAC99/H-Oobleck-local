@@ -442,20 +442,8 @@ class OobleckStaticClassFactory:
             )
         )
         
-        # experimen3: 2 devices per node, 2 v_100_16gb, 2 rtx_a40 2 rtx_3090_24gb 2 rtx_a6000
-        chosed_type = ["v_100_16gb", "rtx_3090_24gb", "rtx_a6000", "rtx_4090_24gb"]
-        num_hetero_nodes = [2, 2, 2, 2]
-        num_device_per_node = [2, 2, 2, 2]
-        computer_power = [self.spec_pool[i] for i in chosed_type]
-        result.append(
-            HeteroNodeSpec(
-                [
-                    NodeConfig(*i) for i in zip(chosed_type, num_hetero_nodes, num_device_per_node, computer_power)
-                ]
-            )
-        )
         
-        # experiment4: irregular number of nodes for experiment3
+        # experiment3: irregular number of nodes for experiment3
         chosed_type = ["v_100_16gb", "rtx_3090_24gb", "rtx_a6000", "rtx_4090_24gb"]
         num_hetero_nodes = [4, 3, 2, 2]
         num_device_per_node = [2, 2, 2, 2]
@@ -468,7 +456,7 @@ class OobleckStaticClassFactory:
             )
         )
         
-        # experiment5: irregular number of gpus for experiment3
+        # experiment4: irregular number of gpus for experiment3
         chosed_type = ["v_100_16gb", "rtx_3090_24gb", "rtx_a6000"]
         num_hetero_nodes = [2, 2, 2]
         num_device_per_node = [4, 4, 4]
@@ -481,7 +469,7 @@ class OobleckStaticClassFactory:
             )
         )
         
-        # experiment6: with super strong node
+        # experiment5: with super strong node
         chosed_type = ["v_100_16gb", "rtx_3090_24gb", "a_100_80gb_pcie"]
         num_hetero_nodes = [4, 4, 2]
         num_device_per_node = [2, 2, 2]
