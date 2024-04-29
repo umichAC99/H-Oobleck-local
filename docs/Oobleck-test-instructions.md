@@ -59,6 +59,7 @@ The first step (generating HLO from BERT) will use the previous Docker container
 After that, you will need a separate Docker container and an additional repo to run on. Make sure you follow instructions carefully to prepare the environment.
 
 Ditto XLA repo: [Link](https://github.com/umichAC99/ditto_xla)
+You must be on branch `psenta/nodefolding`
 
 ```bash
 # in the parent folde of H-Oobleck-local
