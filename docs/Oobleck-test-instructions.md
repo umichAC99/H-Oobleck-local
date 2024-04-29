@@ -53,9 +53,10 @@ pytest tests/planning/test_pipeline_template.py -s
 ```
 
 ## To run XLA cost modeling (Separate Container & Repo Needed)
-First you need to generate a bunch of HLO code from a BERT model. And then Next a script is run to do some simple text manipulation of these files to prepare them. Then you load this HLO code into an internal HLO representation within XLA, and use the XLA cost optimizer to generate timings. Finally, a python script is run to convert these times into json format for Oobleck to digest. 
+First you need to generate a bunch of HLO code from a BERT model. Next a script is run to do some simple text manipulation of these files to prepare them. Then you load this HLO code into an internal HLO representation within XLA, and use the XLA cost optimizer to generate timings. Finally, a python script is run to convert these times into json format for Oobleck to digest. 
 
-This part (except for the first step, generating HLO from BERT) needs a separate Docker container and an additional repo to run on. Make sure you follow instructions carefully to prepare the environment.
+The first step (generating HLO from BERT) will use the previous Docker container and H-OObleck-local github repository.
+After that, you will need a separate Docker container and an additional repo to run on. Make sure you follow instructions carefully to prepare the environment.
 
 Ditto XLA repo: [Link](https://github.com/umichAC99/ditto_xla)
 
@@ -67,7 +68,7 @@ cd xla
 
 ```
 docker pull psenta/ditto_xla:latest
-docker run -it psenta/ditto_xla:latest
+docker run -v <pathToXlaGitRepo>:/workspace/xla -v <pathToHOobleckLocalRepo>:/workspace/H-Oobleck-Local -it psenta/ditto_xla:latest 
 ```
 
 All of the following commands must be run within the separate docker container, and in the path specified for each step.
